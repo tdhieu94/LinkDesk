@@ -44,8 +44,8 @@ public class MainActivity extends Activity {
 
     private TextView heroTitle, heroSub, addrText, pinText, statusDot;
     private Button mainBtn;
-    private TextView controlChip, notifChip;
-    private Button controlBtn, notifBtn;
+    private TextView controlChip, notifChip, photoChip;
+    private Button controlBtn, notifBtn, photoBtn;
     private LinearLayout updateCard;
     private TextView updateText;
     private Button updateBtn;
@@ -305,6 +305,15 @@ public class MainActivity extends Activity {
             @Override public void onClick(View v) { startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); }
         });
         perms.addView(notifBtn);
+        perms.addView(divider());
+        photoChip = permRow(perms, "Ảnh", "Xem và tải ảnh gần đây trên máy tính");
+        photoBtn = button("Cho phép xem ảnh", BLUE_SOFT, BLUE, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (Build.VERSION.SDK_INT >= 34) requestPermissions(new String[]{MediaApi.photoPermission(), "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"}, REQ_PERMS);
+                else requestPermissions(new String[]{MediaApi.photoPermission()}, REQ_PERMS);
+            }
+        });
+        perms.addView(photoBtn);
 
         // ---- ngan hang
         section(root, "App ngân hàng");
@@ -401,6 +410,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onResume() { super.onResume(); h.post(tick); checkUpdate(); }
+    @Override public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); }
     @Override protected void onPause() { super.onPause(); h.removeCallbacks(tick); }
 
     private boolean notifGranted() {
@@ -457,6 +467,10 @@ public class MainActivity extends Activity {
         if (notif) setChip(notifChip, Hub.notif != null ? "Đang bật" : "Đang chờ…", GREEN, GREEN_SOFT);
         else setChip(notifChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
         notifBtn.setVisibility(notif ? View.GONE : View.VISIBLE);
+        boolean photos = MediaApi.canReadPhotos(this);
+        if (photos) setChip(photoChip, "Đã cho phép", GREEN, GREEN_SOFT);
+        else setChip(photoChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
+        photoBtn.setVisibility(photos ? View.GONE : View.VISIBLE);
     }
 
     private void openAccessibilitySettings() {

@@ -8,7 +8,7 @@ using System.Windows.Forms;
 
 namespace LinkDesk
 {
-    public class MainForm : Form
+    public partial class MainForm : Form
     {
         public static readonly Icon AppIcon = LoadIcon();
         static Icon LoadIcon()
@@ -136,7 +136,7 @@ namespace LinkDesk
         void OnDragEnter(object s, DragEventArgs e) { if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy; }
         void OnDragDrop(object s, DragEventArgs e)
         {
-            if (e.Data.GetData(DataFormats.FileDrop) is string[] files) { left.Visible = true; tabs.Select(1); foreach (var f in files) Upload(f); }
+            if (e.Data.GetData(DataFormats.FileDrop) is string[] files) { left.Visible = true; tabs.Select(2); foreach (var f in files) Upload(f); }
         }
 
         // ------------------------------------------------------------------ dau trang
@@ -161,6 +161,10 @@ namespace LinkDesk
             updateBtn = new RoundButton("\uE896", "Cập nhật", BtnStyle.Primary) { Visible = false };
             updateBtn.Click += (s, e) => OfferUpdate(pendingUpdate, true);
             headerRight.Controls.Add(gear);
+            pinBtn = new RoundButton("\uE718", "", BtnStyle.Ghost);
+            new ToolTip().SetToolTip(pinBtn, "Luôn nằm trên các cửa sổ khác");
+            pinBtn.Click += (s, e) => { Cfg.TopMost = !Cfg.TopMost; Cfg.Save(); ApplyTopMost(); };
+            headerRight.Controls.Add(pinBtn);
             headerRight.Controls.Add(updateBtn);
             header.Controls.Add(headerRight);
             EventHandler place = (s, e) => { headerRight.Location = new Point(header.Width - headerRight.Width - Theme.S(14), (header.Height - headerRight.Height) / 2); headerRight.BringToFront(); };
@@ -221,17 +225,18 @@ namespace LinkDesk
         void BuildLeft()
         {
             var top = new Panel { Dock = DockStyle.Top, Height = Theme.S(60), BackColor = Theme.Bg };
-            tabs = new Segmented("Thông báo", "Tệp", "Gõ chữ");
+            tabs = new Segmented("Thông báo", "Ảnh", "Tệp", "Gõ chữ");
             tabs.Location = new Point(Theme.S(16), Theme.S(14));
             top.Controls.Add(tabs);
             var pages = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg };
             pages.Controls.Add(notifFlow);
+            pages.Controls.Add(photosFlow);
             pages.Controls.Add(filesFlow);
             pages.Controls.Add(typeFlow);
             left.Controls.Add(pages);
             left.Controls.Add(top);
             left.Controls.Add(new Panel { Dock = DockStyle.Right, Width = 1, BackColor = Theme.Line });
-            tabs.Changed += i => { notifFlow.Visible = i == 0; filesFlow.Visible = i == 1; typeFlow.Visible = i == 2; };
+            tabs.Changed += i => { notifFlow.Visible = i == 0; photosFlow.Visible = i == 1; filesFlow.Visible = i == 2; typeFlow.Visible = i == 3; if (i == 1) OnPhotosTab(); };
             notifFlow.Visible = true;
 
             // --- thong bao
@@ -242,6 +247,8 @@ namespace LinkDesk
             notifEmpty.Margin = Theme.P(2, 6, 0, 0);
             notifFlow.Controls.Add(notifEmpty);
             notifFlow.Resize += (s, e) => { foreach (Control c in notifFlow.Controls) if (c is Card) c.MinimumSize = c.MaximumSize = new Size(CardWidth(), 0); };
+
+            BuildPhotos();
 
             // --- tep
             var f = PageCard(filesFlow, "\uE898", "Gửi tệp sang điện thoại");
@@ -324,6 +331,7 @@ namespace LinkDesk
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            ApplyTopMost();
             var last = Cfg.Last;
             if (last != null) Connect(last);
             else if (!startHidden) BeginInvoke(new Action(() => ShowConnect(null)));
@@ -361,6 +369,9 @@ namespace LinkDesk
             phoneName = e.Name;
             nameLbl.Text = string.IsNullOrEmpty(e.Name) ? e.Host : e.Name;
             notifs.Clear(); RenderNotifs();
+            photosLoaded = false; photoGen++; iconPending.Clear();
+            foreach (Control x in photoGrid.Controls.Cast<Control>().ToList()) { photoGrid.Controls.Remove(x); x.Dispose(); }
+            photoInfo.Text = "";
             screen.Banner = null;
             screen.ClearFrame("Đang kết nối tới " + nameLbl.Text + "…");
             var c = new PhoneClient(e.Host, e.Port, e.Pin);
@@ -438,7 +449,7 @@ namespace LinkDesk
                 case "status": OnStatus(m); break;
                 case "toast": Toast(m.S("msg")); break;
                 case "copied":
-                    try { Clipboard.SetText(m.S("s")); Toast("Đã chép vào clipboard máy tính"); } catch { }
+                    try { lastClipFromPhone = m.S("s"); Clipboard.SetText(m.S("s")); Toast("Đã chép vào clipboard máy tính"); } catch { }
                     break;
                 case "notifs":
                     notifs.Clear();
@@ -540,11 +551,12 @@ namespace LinkDesk
                 var card = new Card { Padding = Theme.P(14, 12, 14, 12), Margin = Theme.P(0, 0, 0, 10) };
                 card.MinimumSize = card.MaximumSize = new Size(w, 0);
                 int tw = w - Theme.S(30);
-                var head = new Label { AutoSize = false, Width = tw, Height = Theme.S(18), Font = Theme.Small, ForeColor = Theme.Muted, Text = n.S("app") };
-                var time = new Label { AutoSize = false, Width = tw, Height = Theme.S(18), Font = Theme.Small, ForeColor = Theme.Muted, Text = TimeStr(n.L("time")), TextAlign = ContentAlignment.TopRight, Margin = Theme.P(0, -Theme.S(18) / 1, 0, 0) };
+                var head = new Panel { Width = tw, Height = Theme.S(20), BackColor = card.Fill, Margin = new Padding(0) };
+                var ico = AppIconBox(n.S("pkg")); ico.BackColor = card.Fill; ico.Location = new Point(0, Theme.S(1));
+                var app = new Label { AutoSize = false, Location = new Point(Theme.S(24), 0), Width = tw - Theme.S(90), Height = Theme.S(20), Font = Theme.Small, ForeColor = Theme.Muted, Text = n.S("app"), TextAlign = ContentAlignment.MiddleLeft, BackColor = card.Fill, AutoEllipsis = true };
+                var time = new Label { AutoSize = false, Location = new Point(tw - Theme.S(66), 0), Width = Theme.S(66), Height = Theme.S(20), Font = Theme.Small, ForeColor = Theme.Muted, Text = TimeStr(n.L("time")), TextAlign = ContentAlignment.MiddleRight, BackColor = card.Fill };
+                head.Controls.Add(ico); head.Controls.Add(app); head.Controls.Add(time);
                 card.Controls.Add(head);
-                card.Controls.Add(time);
-                time.Margin = new Padding(0, -Theme.S(18), 0, 0);
                 if (n.S("title") != "") { var t = Theme.Lbl(n.S("title"), Theme.UIBold); t.MaximumSize = new Size(tw, 0); t.Margin = Theme.P(0, 2, 0, 0); card.Controls.Add(t); }
                 if (n.S("text") != "")
                 {

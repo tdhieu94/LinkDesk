@@ -59,6 +59,19 @@ namespace LinkDesk
             }
         }
 
+        static readonly HttpClient mediaHttp = new HttpClient(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromMinutes(10) };
+
+        /// <summary>GET mot duong dan co PIN (anh, bieu tuong...). Loi -> nem Exception voi noi dung tra ve.</summary>
+        public async Task<byte[]> GetBytes(string path, params string[] kv)
+        {
+            var sb = new StringBuilder(Base + path + "?pin=" + Uri.EscapeDataString(Pin));
+            for (int i = 0; i + 1 < kv.Length; i += 2) sb.Append("&" + kv[i] + "=" + Uri.EscapeDataString(kv[i + 1]));
+            var r = await mediaHttp.GetAsync(sb.ToString()).ConfigureAwait(false);
+            var body = await r.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+            if (!r.IsSuccessStatusCode) throw new Exception(Encoding.UTF8.GetString(body));
+            return body;
+        }
+
         public void Start() => Task.Run(RunLoop);
 
         async Task RunLoop()

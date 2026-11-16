@@ -25,6 +25,8 @@ namespace LinkDesk
         public bool TrayHintShown { get; set; }
         public bool SidePanel { get; set; } = true;
         public bool AutoUpdate { get; set; } = true;
+        public bool ClipSync { get; set; } = true;
+        public bool TopMost { get; set; }
         public string SkippedVersion { get; set; } = "";
         public int WindowWidth { get; set; }
         public int WindowHeight { get; set; }

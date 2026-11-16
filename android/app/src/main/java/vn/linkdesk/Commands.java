@@ -28,6 +28,7 @@ public final class Commands {
         JSONObject o = new JSONObject().put("t", "status")
                 .put("control", Hub.control != null)
                 .put("notif", Hub.notif != null)
+                .put("photos", MediaApi.canReadPhotos(ctx))
                 .put("mirror", Hub.mirror != null && Hub.mirror.isProjecting())
                 .put("screenOn", MirrorService.isScreenOn(ctx))
                 .put("keepAwake", Prefs.getKeepAwake(ctx))
@@ -126,8 +127,8 @@ public final class Commands {
             }
             case "clip": {
                 ControlService s = Hub.control;
-                if (s != null) { s.setClipboard(m.optString("s")); toast(c, "Đã chép vào bộ nhớ tạm của điện thoại"); }
-                else toast(c, "Cần bật Trợ năng để chép vào điện thoại.");
+                if (s != null) { s.setClipboard(m.optString("s")); if (!m.optBoolean("quiet")) toast(c, "Đã chép vào bộ nhớ tạm của điện thoại"); }
+                else if (!m.optBoolean("quiet")) toast(c, "Cần bật Trợ năng để chép vào điện thoại.");
                 return;
             }
             case "notifOpen":

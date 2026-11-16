@@ -66,7 +66,7 @@ namespace LinkDesk
         Rectangle ImageRect()
         {
             int w = fw > 0 ? fw : 9, h = fh > 0 ? fh : 19;
-            int pad = 12;
+            int pad = Theme.S(26);
             float s = Math.Min((Width - 2f * pad) / w, (Height - 2f * pad) / h);
             if (s <= 0) s = 0.01f;
             int dw = (int)(w * s), dh = (int)(h * s);
@@ -79,8 +79,19 @@ namespace LinkDesk
             g.Clear(BackColor);
             var r = ImageRect();
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var path = Theme.Round(new Rectangle(r.X - 1, r.Y - 1, r.Width + 2, r.Height + 2), 12))
-            using (var pen = new Pen(Focused ? Theme.Accent : Theme.Line, Focused ? 2 : 1))
+            int rad = Math.Max(Theme.S(10), Math.Min(r.Width, r.Height) / 14);
+            int bz = Theme.S(9);
+            // than may: bong mo + vien
+            var body = new Rectangle(r.X - bz, r.Y - bz, r.Width + 2 * bz, r.Height + 2 * bz);
+            for (int i = 3; i >= 1; i--)
+                using (var sp = Theme.Round(new Rectangle(body.X - i * 2, body.Y - i * 2 + 3, body.Width + i * 4, body.Height + i * 4), rad + bz + i * 2))
+                using (var sb = new SolidBrush(Color.FromArgb(18, 0, 0, 0))) g.FillPath(sb, sp);
+            using (var bp = Theme.Round(body, rad + bz))
+            using (var bb = new LinearGradientBrush(body, Color.FromArgb(44, 48, 56), Color.FromArgb(28, 31, 37), 90f))
+            using (var bpen = new Pen(Color.FromArgb(70, 76, 88), 1))
+            { g.FillPath(bb, bp); g.DrawPath(bpen, bp); }
+            using (var path = Theme.Round(new Rectangle(r.X - 1, r.Y - 1, r.Width + 2, r.Height + 2), rad))
+            using (var pen = new Pen(Focused ? Theme.Accent : Color.FromArgb(10, 10, 12), Focused ? 2 : 1))
             {
                 g.FillPath(Brushes.Black, path);
                 if (frame != null)
@@ -96,7 +107,7 @@ namespace LinkDesk
             if (banner != null && frame != null)
             {
                 using (var b = new SolidBrush(Color.FromArgb(200, 10, 12, 15)))
-                using (var path = Theme.Round(new Rectangle(r.X - 1, r.Y - 1, r.Width + 2, r.Height + 2), 12))
+                using (var path = Theme.Round(new Rectangle(r.X - 1, r.Y - 1, r.Width + 2, r.Height + 2), rad))
                     g.FillPath(b, path);
             }
             if (banner != null)

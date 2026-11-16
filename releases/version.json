@@ -1,5 +1,12 @@
 {
-  "android": { "versionCode": 4, "versionName": "0.4.0", "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.apk" },
-  "windows": { "version": "0.4.0", "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.exe" },
-  "notes": "Tự báo cập nhật, chỉnh khung hình/giây, chế độ siêu tối, giao diện mới."
+  "android": {
+    "versionCode": 5,
+    "versionName": "0.5.0",
+    "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.apk"
+  },
+  "windows": {
+    "version": "0.5.0",
+    "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.exe"
+  },
+  "notes": "Mục Ảnh: xem và tải ảnh trong điện thoại. Biểu tượng ứng dụng trong thông báo. Tự gửi chữ vừa chép trên máy tính sang điện thoại. Nút ghim cửa sổ, khung điện thoại mới."
 }
