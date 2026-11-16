@@ -184,7 +184,7 @@ Sau đó **tắt Tùy chọn nhà phát triển như bình thường**, vì quy�
 - Nếu **tắt hẳn màn hình** bằng nút nguồn thì hình sẽ dừng (xem mục "Khi màn hình điện thoại tắt").
 - Chỉ dùng được trong **cùng mạng WiFi** (không qua Internet).
 - Từ bản 0.11.0 (máy tính) + 0.9.0 (điện thoại), kết nối giữa app máy tính và điện thoại được **mã hoá TLS**. Lần ghép đôi đầu tiên máy tính ghi nhớ "mã bảo mật" của điện thoại; nếu sau này mã khác đi (cài lại app, hoặc thiết bị lạ giả mạo) máy tính sẽ dừng và hỏi lại PIN. Riêng trang web dự phòng (mở bằng trình duyệt) vẫn chưa mã hoá, nên chỉ dùng trình duyệt ở WiFi tin cậy. Nhập sai PIN 5 lần sẽ bị khoá 1 phút. Có thể bấm **Đổi mã PIN** bất cứ lúc nào.
-- Gọi điện: cuộc gọi diễn ra trên điện thoại, máy tính chưa nghe/nói được trong cuộc gọi.
+- Gọi điện: cuộc gọi diễn ra trên điện thoại; **không dùng được micro và loa máy tính trong cuộc gọi**. Android không cho app thường (không phải của hãng) đưa tiếng vào cuộc gọi điện thoại hay lấy tiếng người bên kia qua WiFi. Phone Link làm được là nhờ Bluetooth (máy tính đóng vai tai nghe) và quyền riêng của Windows mà app ngoài không dùng được. Cách thay thế: kết nối điện thoại với tai nghe Bluetooth, hoặc ghép đôi Bluetooth điện thoại với máy tính và dùng Phone Link chỉ cho việc nghe gọi.
 
 ---
 
