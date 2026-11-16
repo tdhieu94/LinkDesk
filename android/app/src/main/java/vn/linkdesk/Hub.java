@@ -56,6 +56,29 @@ public final class Hub {
         for (WsConn c : snapshotClients()) c.sendText(s);
     }
 
+    // ---------------------------------------------------------------- H.264
+    private static volatile boolean h264Failed;
+
+    /** Co may dang xem va tat ca deu giai ma duoc H.264. */
+    public static boolean allWantH264() {
+        if (h264Failed) return false;
+        List<WsConn> l = snapshotClients();
+        if (l.isEmpty()) return false;
+        for (WsConn c : l) if (!c.wantH264) return false;
+        return true;
+    }
+
+    public static void setH264Failed() { h264Failed = true; }
+
+    public static void publishVideo(byte[] p, boolean key) {
+        for (WsConn c : snapshotClients()) if (c.wantH264) c.sendVideo(p, key);
+    }
+
+    public static void requestKeyFrame() {
+        MirrorService m = mirror;
+        if (m != null) m.requestKeyFrame();
+    }
+
     public static void publishFrame(byte[] data) {
         synchronized (frameLock) {
             frame = data;

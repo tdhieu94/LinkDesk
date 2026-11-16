@@ -30,6 +30,8 @@ namespace LinkDesk
         public bool ClipSync { get; set; } = true;
         public bool Audio { get; set; } = false;
         public int AudioVolume { get; set; } = 100;
+        /// <summary>Video H.264 (thu nghiem).</summary>
+        public bool H264 { get; set; } = false;
         public bool TopMost { get; set; }
         public string Theme { get; set; } = "dark";
         public string SkippedVersion { get; set; } = "";

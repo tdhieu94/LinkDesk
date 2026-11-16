@@ -216,6 +216,7 @@ public class MirrorService extends Service {
     public void onClientsChanged() {
         main.post(new Runnable() {
             @Override public void run() {
+                if (capturer != null) capturer.updateMode();
                 if (Hub.clientCount() > 0 && capturer != null) capturer.requestFrame();
                 updateAwake();
             }
@@ -229,6 +230,13 @@ public class MirrorService extends Service {
             capturer.requestFrame();
         }
     }
+
+    public void requestKeyFrame() {
+        ScreenCapturer c = capturer;
+        if (c != null) c.requestKey();
+    }
+
+    public boolean isH264() { ScreenCapturer c = capturer; return c != null && c.isH264(); }
 
     public void requestFrame() {
         if (capturer != null) capturer.requestFrame();

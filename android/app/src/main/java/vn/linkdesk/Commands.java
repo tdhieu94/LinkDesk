@@ -42,6 +42,7 @@ public final class Commands {
                 .put("quality", Prefs.getQuality(ctx))
                 .put("fps", Prefs.getFps(ctx))
                 .put("audio", AudioStreamer.isRunning())
+                .put("codec", Hub.mirror != null && Hub.mirror.isH264() ? "h264" : "jpeg")
                 .put("audioOk", AudioStreamer.supported() && AudioStreamer.permitted(ctx));
         try {
             Intent b = ctx.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
@@ -199,6 +200,17 @@ public final class Commands {
                 c.sendText(status(ctx).toString());
                 return;
             }
+            case "codec": {
+                c.wantH264 = m.optBoolean("h264");
+                c.resetVideo();
+                MirrorService ms = Hub.mirror;
+                if (ms != null) ms.onClientsChanged();
+                return;
+            }
+            case "keyframe":
+                c.resetVideo();
+                Hub.requestKeyFrame();
+                return;
             case "bankMode":
                 bankMode(ctx);
                 return;

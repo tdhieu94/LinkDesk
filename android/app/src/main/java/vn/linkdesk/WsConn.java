@@ -25,6 +25,11 @@ public class WsConn {
     private volatile boolean open = true;
     /** May tinh nay muon nghe am thanh dien thoai. */
     public volatile boolean wantAudio;
+    /** May tinh nay giai ma duoc H.264. */
+    public volatile boolean wantH264;
+    private final java.util.ArrayDeque<byte[]> videoQ = new java.util.ArrayDeque<byte[]>();
+    private int videoBytes;
+    private boolean needKey = true;
     // Hang doi am thanh nho: neu mang cham thi bo khung cu, giu do tre thap
     private final java.util.concurrent.ArrayBlockingQueue<byte[]> audioQ = new java.util.concurrent.ArrayBlockingQueue<byte[]>(12);
     // Gui tin nhan chu tren luong rieng (khong bao gio ghi socket tren luong chinh cua Android)
@@ -49,6 +54,11 @@ public class WsConn {
         }, "ws-audio");
         audio.setDaemon(true);
         audio.start();
+        Thread video = new Thread(new Runnable() {
+            @Override public void run() { videoLoop(); }
+        }, "ws-video");
+        video.setDaemon(true);
+        video.start();
         try {
             Commands.sendHello(ctx, this);
             readLoop();
@@ -76,6 +86,41 @@ public class WsConn {
                 if (f == null) continue;
                 seq = (Long) f[1];
                 sendFrame(2, (byte[]) f[0]);
+            }
+        } catch (Exception e) {
+            close();
+        }
+    }
+
+    /** Khung H.264 theo dung thu tu; mang cham thi bo het va doi khung khoa moi. */
+    public void sendVideo(byte[] p, boolean key) {
+        if (!open) return;
+        synchronized (videoQ) {
+            if (needKey && !key) { Hub.requestKeyFrame(); return; }
+            if (videoBytes + p.length > 4 * 1024 * 1024 || videoQ.size() > 90) {
+                videoQ.clear(); videoBytes = 0;
+                if (!key) { needKey = true; Hub.requestKeyFrame(); return; }
+            }
+            needKey = false;
+            videoQ.add(p); videoBytes += p.length;
+            videoQ.notifyAll();
+        }
+    }
+
+    public void resetVideo() {
+        synchronized (videoQ) { videoQ.clear(); videoBytes = 0; needKey = true; }
+    }
+
+    private void videoLoop() {
+        try {
+            while (open) {
+                byte[] p;
+                synchronized (videoQ) {
+                    if (videoQ.isEmpty()) videoQ.wait(1000);
+                    p = videoQ.poll();
+                    if (p != null) videoBytes -= p.length;
+                }
+                if (p != null) sendFrame(2, p);
             }
         } catch (Exception e) {
             close();

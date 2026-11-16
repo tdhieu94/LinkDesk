@@ -78,6 +78,10 @@ namespace LinkDesk
             v.Controls.Add(Row(RowLabel("Độ nét (cạnh dài, px)"), size));
             qualityLbl.Margin = Theme.P(8, 12, 0, 0); quality.Margin = Theme.P(0, 7, 0, 0);
             v.Controls.Add(Row(RowLabel("Chất lượng ảnh"), quality, qualityLbl));
+            var h264 = Chk("Video H.264 (thử nghiệm): mượt hơn, ít tốn mạng hơn", cfg.H264);
+            h264.CheckedChanged += (s, e) => { if (!loading) main.SetH264(h264.Checked); };
+            v.Controls.Add(h264);
+            v.Controls.Add(Hint("H.264 dùng bộ giải mã có sẵn của Windows. Nếu hình bị lỗi màu, nhoè hoặc đứng, hãy tắt mục này để quay về chế độ ảnh. Trang web trên trình duyệt luôn dùng chế độ ảnh."));
             v.Controls.Add(Hint("Khung/giây và độ nét cao cần WiFi mạnh. Nếu bị giật hoặc trễ, giảm độ nét trước (ví dụ 1080), sau đó mới giảm khung/giây."));
             UpdateQualityLabel();
             fps.Changed += i => SendVideo();

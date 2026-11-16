@@ -451,6 +451,7 @@ namespace LinkDesk
                 try { BeginInvoke(new Action(() => { if (client == c) screen.SetFrame(bmp, w, h); else bmp.Dispose(); })); } catch { bmp.Dispose(); }
             };
             c.Audio += d => OnAudio(c, d);
+            c.Video += d => OnVideoPacket(c, d);
             c.Message += m => { try { BeginInvoke(new Action(() => { if (client == c) OnMessage(m); })); } catch { } };
             c.StateChanged += (st, msg) => { try { BeginInvoke(new Action(() => { if (client == c) OnState(st, msg); })); } catch { } };
             c.Start();
@@ -526,6 +527,7 @@ namespace LinkDesk
                     modelLbl.Text = phoneModel + (androidVer != "" ? " · Android " + androidVer : "");
                     LoadWallpaper();
                     if (Cfg.Audio) client?.Send("t", "audio", "on", true);
+                    if (Cfg.H264 && !h264Failed) RequestCodec();
                     Text = "LinkDesk – " + phoneName;
                     if (current != null && current.Name != phoneName) { current.Name = phoneName; Cfg.Save(); }
                     if (!screen.HasFrame) screen.ClearFrame("Đã kết nối. Đang chờ hình từ điện thoại…");
