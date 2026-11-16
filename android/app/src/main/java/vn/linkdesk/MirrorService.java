@@ -77,6 +77,7 @@ public class MirrorService extends Service {
     }
 
     private void startServer() throws Exception {
+        PhoneApi.watch(this);
         web = new WebServer(this);
         web.start();
         discovery = new Discovery(this);

@@ -44,8 +44,8 @@ public class MainActivity extends Activity {
 
     private TextView heroTitle, heroSub, addrText, pinText, statusDot;
     private Button mainBtn;
-    private TextView controlChip, notifChip, photoChip, fileChip;
-    private Button controlBtn, notifBtn, photoBtn, fileBtn;
+    private TextView controlChip, notifChip, photoChip, fileChip, smsChip, callChip;
+    private Button controlBtn, notifBtn, photoBtn, fileBtn, smsBtn, callBtn;
     private LinearLayout updateCard;
     private TextView updateText;
     private Button updateBtn;
@@ -324,6 +324,18 @@ public class MainActivity extends Activity {
             }
         });
         perms.addView(fileBtn);
+        perms.addView(divider());
+        smsChip = permRow(perms, "Tin nhắn", "Đọc và gửi SMS từ máy tính");
+        smsBtn = button("Cho phép tin nhắn", BLUE_SOFT, BLUE, new View.OnClickListener() {
+            @Override public void onClick(View v) { askRuntime(PhoneApi.SMS_PERMS); }
+        });
+        perms.addView(smsBtn);
+        perms.addView(divider());
+        callChip = permRow(perms, "Cuộc gọi", "Xem cuộc gọi gần đây, gọi điện từ máy tính");
+        callBtn = button("Cho phép cuộc gọi", BLUE_SOFT, BLUE, new View.OnClickListener() {
+            @Override public void onClick(View v) { askRuntime(new String[]{android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.CALL_PHONE, android.Manifest.permission.READ_CONTACTS, "android.permission.ANSWER_PHONE_CALLS"}); }
+        });
+        perms.addView(callBtn);
 
         // ---- bo nho tam
         section(root, "Gửi sang máy tính");
@@ -428,7 +440,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onResume() { super.onResume(); h.post(tick); checkUpdate(); }
-    @Override public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); }
+    @Override public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); PhoneApi.watch(getApplicationContext()); Commands.broadcastStatus(this); }
     @Override protected void onPause() { super.onPause(); h.removeCallbacks(tick); }
 
     private boolean notifGranted() {
@@ -489,10 +501,29 @@ public class MainActivity extends Activity {
         if (photos) setChip(photoChip, "Đã cho phép", GREEN, GREEN_SOFT);
         else setChip(photoChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
         photoBtn.setVisibility(photos ? View.GONE : View.VISIBLE);
+        boolean sms = PhoneApi.canSms(this), calls = PhoneApi.canCalls(this);
+        if (sms) setChip(smsChip, "Đã cho phép", GREEN, GREEN_SOFT); else setChip(smsChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
+        smsBtn.setVisibility(sms ? View.GONE : View.VISIBLE);
+        if (calls) setChip(callChip, "Đã cho phép", GREEN, GREEN_SOFT); else setChip(callChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
+        callBtn.setVisibility(calls ? View.GONE : View.VISIBLE);
         boolean files = FilesApi.canReadAll(this);
         if (files) setChip(fileChip, "Đã cho phép", GREEN, GREEN_SOFT);
         else setChip(fileChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
         fileBtn.setVisibility(files ? View.GONE : View.VISIBLE);
+    }
+
+    private int askCount;
+    /** Xin quyen; neu Android chan (quyen "han che" voi app cai ngoai) thi mo trang thong tin app. */
+    private void askRuntime(String[] perms) {
+        boolean denied = false;
+        for (String p : perms) if (checkSelfPermission(p) != android.content.pm.PackageManager.PERMISSION_GRANTED && !shouldShowRequestPermissionRationale(p)) denied = true;
+        if (denied && askCount > 0) {
+            android.widget.Toast.makeText(this, "Android đang chặn quyền này. Trong trang vừa mở: bấm ⋮ → \"Cho phép cài đặt hạn chế\", rồi vào Quyền và bật.", android.widget.Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + getPackageName())));
+            return;
+        }
+        askCount++;
+        requestPermissions(perms, REQ_PERMS);
     }
 
     private void sendClipToPc() {

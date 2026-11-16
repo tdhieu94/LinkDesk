@@ -142,7 +142,7 @@ namespace LinkDesk
         void OnDragEnter(object s, DragEventArgs e) { if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy; }
         void OnDragDrop(object s, DragEventArgs e)
         {
-            if (e.Data.GetData(DataFormats.FileDrop) is string[] files) { ShowPage(2); foreach (var f in files) Upload(f); }
+            if (e.Data.GetData(DataFormats.FileDrop) is string[] files) { ShowPage(4); foreach (var f in files) Upload(f); }
         }
 
         // ------------------------------------------------------------------ dau trang
@@ -194,6 +194,8 @@ namespace LinkDesk
             clearAllBtn.Click += (s, e) => { foreach (var n in notifs.Values.Where(n => n.B("clearable")).ToList()) client?.Send("t", "notifDismiss", "key", n.S("key")); };
             nh.Controls.Add(nt); nh.Controls.Add(clearAllBtn);
 
+            pages.Controls.Add(smsPage); pages.Controls.Add(callsPage);
+            BuildSms(); BuildCalls();
             notifFlow.Visible = true;
             notifFlow.BackColor = Theme.Panel;
             side.Controls.Add(notifFlow);
@@ -205,15 +207,20 @@ namespace LinkDesk
 
             // --- thanh tab ben phai
             tabs.Add("\uE8EA", "Màn hình");
+            tabs.Add("\uE8BD", "Tin nhắn");
             tabs.Add("\uEB9F", "Ảnh");
+            tabs.Add("\uE717", "Cuộc gọi");
             tabs.Add("\uE8B7", "Tệp");
             tabs.Add("\uE765", "Gõ chữ");
             tabs.Location = new Point(Theme.S(16), Theme.S(8));
             tabs.Changed += i =>
             {
-                center.Visible = i == 0; photosFlow.Visible = i == 1; filesFlow.Visible = i == 2; typeFlow.Visible = i == 3;
-                if (i == 1) OnPhotosTab();
-                if (i == 2) OnFilesTab();
+                center.Visible = i == 0; smsPage.Visible = i == 1; photosFlow.Visible = i == 2;
+                callsPage.Visible = i == 3; filesFlow.Visible = i == 4; typeFlow.Visible = i == 5;
+                if (i == 1) OnSmsTab();
+                if (i == 2) OnPhotosTab();
+                if (i == 3) OnCallsTab();
+                if (i == 4) OnFilesTab();
                 if (i == 0) screen.Focus();
             };
             tabBar.Controls.Add(tabs);
@@ -234,7 +241,7 @@ namespace LinkDesk
             tabBar.Resize += place; headerRight.SizeChanged += place; tabBar.Layout += (s, e) => place(s, e);
         }
 
-        /// <summary>Mo tab ben phai (0 man hinh, 1 anh, 2 tep, 3 go chu).</summary>
+        /// <summary>Mo tab ben phai (0 man hinh, 1 tin nhan, 2 anh, 3 cuoc goi, 4 tep, 5 go chu).</summary>
         void ShowPage(int i) => tabs.Select(i);
 
         static void MakeRound(Control c, int r)
@@ -427,6 +434,8 @@ namespace LinkDesk
             nameLbl.Text = string.IsNullOrEmpty(e.Name) ? e.Host : e.Name;
             notifs.Clear(); RenderNotifs();
             photosLoaded = false; photoGen++; iconPending.Clear(); phoneFilesLoaded = false; filesGen++;
+            smsLoaded = false; smsGen++; convGen++; convId = null; convAddr = null; callsLoaded = false;
+            ClearRows(threadList); ClearRows(msgList); ClearRows(callList); convPanel.Visible = false; convEmpty.Visible = true;
             if (mediaCard != null) mediaCard.Parent.Visible = false;
             foreach (Control x in photoGrid.Controls.Cast<Control>().ToList()) { photoGrid.Controls.Remove(x); x.Dispose(); }
             photoInfo.Text = "";
@@ -535,6 +544,8 @@ namespace LinkDesk
                 case "notifRemoved": notifs.Remove(m.S("key")); RenderNotifs(); break;
                 case "media": OnMedia(m); break;
                 case "incoming": OnIncoming(m); break;
+                case "smsChanged": OnSmsChanged(); break;
+                case "callsChanged": if (callsLoaded) LoadCalls(); break;
             }
         }
 
