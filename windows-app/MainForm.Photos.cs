@@ -37,16 +37,24 @@ namespace LinkDesk
             photoInfo.Margin = Theme.P(2, 0, 0, 10);
             photosFlow.Controls.Add(photoInfo);
             photosFlow.Controls.Add(photoGrid);
-            photosFlow.Resize += (s, e) => { c.MinimumSize = c.MaximumSize = new Size(CardWidth(), 0); LayoutThumbs(); };
-            c.MinimumSize = c.MaximumSize = new Size(CardWidth(), 0);
+            photoCard = c;
+            photosFlow.Resize += (s, e) => LayoutThumbs();
         }
 
-        int ThumbSize() => Math.Max(Theme.S(80), (CardWidth() - Theme.S(16)) / 3);
+        Card photoCard;
+        int PhotoAvail() => Math.Max(Theme.S(300), photosFlow.ClientSize.Width - photosFlow.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth);
+        int ThumbSize()
+        {
+            int avail = PhotoAvail(), gap = Theme.S(6);
+            int cols = Math.Max(3, (avail + gap) / (Theme.S(150) + gap));
+            return (avail + gap) / cols - gap;
+        }
 
         void LayoutThumbs()
         {
-            int t = ThumbSize();
-            photoGrid.MaximumSize = new Size(CardWidth() + Theme.S(4), 0);
+            int t = ThumbSize(), avail = PhotoAvail();
+            if (photoCard != null) photoCard.MinimumSize = photoCard.MaximumSize = new Size(avail, 0);
+            photoGrid.MaximumSize = new Size(avail + Theme.S(6), 0);
             foreach (Control x in photoGrid.Controls) x.Size = new Size(t, t);
         }
 
@@ -82,7 +90,7 @@ namespace LinkDesk
                 photoGrid.SuspendLayout();
                 foreach (var it in items)
                 {
-                    var th = new Thumb { Size = new Size(t, t), Margin = Theme.P(0, 0, 4, 4), Tag = it };
+                    var th = new Thumb { Size = new Size(t, t), Margin = Theme.P(0, 0, 6, 6), Tag = it };
                     new ToolTip().SetToolTip(th, it.S("name") + "\n" + TimeStr(it.L("time")) + " · " + FmtSize(it.L("size")));
                     th.Click += (s, e) => { if (((MouseEventArgs)e).Button == MouseButtons.Left) OpenPhoto(it, null); };
                     th.ContextMenuStrip = PhotoMenu(it);

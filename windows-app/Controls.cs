@@ -361,4 +361,216 @@ namespace LinkDesk
             using (var p = Theme.Round(new Rectangle(0, 0, Width, Height), Math.Min(Height / 2, Theme.S(18)))) Region = new Region(p);
         }
     }
+
+    /// <summary>Thanh dieu huong doc ben trai (kieu Phone Link / Windows 11).</summary>
+    public class NavRail : Panel
+    {
+        public event Action<int> ItemClicked;
+        public int Selected { get; private set; } = -1;
+        readonly System.Collections.Generic.List<RoundButton> items = new System.Collections.Generic.List<RoundButton>();
+        readonly FlowLayoutPanel top = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, Dock = DockStyle.Top, AutoSize = true, Padding = Theme.P(6, 10, 6, 0) };
+        readonly FlowLayoutPanel bottom = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, Dock = DockStyle.Bottom, AutoSize = true, Padding = Theme.P(6, 0, 6, 10) };
+
+        public NavRail()
+        {
+            Dock = DockStyle.Left; Width = Theme.S(76); BackColor = Theme.Panel;
+            top.BackColor = bottom.BackColor = Theme.Panel;
+            Controls.Add(top); Controls.Add(bottom);
+            Controls.Add(new Panel { Dock = DockStyle.Right, Width = 1, BackColor = Theme.Line });
+        }
+
+        public RoundButton Add(string glyph, string label)
+        {
+            int idx = items.Count;
+            var b = Make(glyph, label);
+            b.Click += (s, e) => ItemClicked?.Invoke(idx);
+            items.Add(b);
+            top.Controls.Add(b);
+            return b;
+        }
+
+        public RoundButton AddBottom(string glyph, string label, Action click)
+        {
+            var b = Make(glyph, label);
+            b.Click += (s, e) => click();
+            bottom.Controls.Add(b);
+            return b;
+        }
+
+        static RoundButton Make(string glyph, string label)
+        {
+            var b = new RoundButton(glyph, label, BtnStyle.Nav) { Vertical = true, Radius = 10, Margin = Theme.P(0, 0, 0, 4) };
+            b.AutoFit();
+            return b;
+        }
+
+        public void Select(int i)
+        {
+            Selected = i;
+            for (int k = 0; k < items.Count; k++) { items[k].Toggled = k == i; items[k].Invalidate(); }
+        }
+
+        public void SetBadge(int i, int n) { items[i].Badge = n; items[i].Invalidate(); }
+    }
+
+    /// <summary>Hang "chip" trang thai: ket noi, pin, khung/s.</summary>
+    public class Chips : Control
+    {
+        public readonly System.Collections.Generic.List<(string glyph, string text, Color color)> Items = new System.Collections.Generic.List<(string, string, Color)>();
+
+        public Chips()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            Height = Theme.S(24); Font = Theme.Small;
+        }
+
+        public void Set(params (string glyph, string text, Color color)[] items)
+        {
+            Items.Clear(); Items.AddRange(items);
+            int w = 0;
+            foreach (var it in Items) w += ChipWidth(it) + Theme.S(6);
+            Width = Math.Max(1, w);
+            Invalidate();
+        }
+
+        int ChipWidth((string glyph, string text, Color color) it) =>
+            Theme.S(10) + (it.glyph != "" ? Theme.S(18) : 0) + TextRenderer.MeasureText(it.text, Font).Width + Theme.S(4);
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.Clear(BackColor);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            int x = 0;
+            foreach (var it in Items)
+            {
+                int w = ChipWidth(it);
+                var r = new Rectangle(x, 0, w, Height - 1);
+                using (var p = Theme.Round(r, r.Height / 2)) using (var b = new SolidBrush(Theme.Panel2)) g.FillPath(b, p);
+                int tx = x + Theme.S(8);
+                if (it.glyph == "●")
+                {
+                    int d = Theme.S(8);
+                    using (var b = new SolidBrush(it.color)) g.FillEllipse(b, tx + Theme.S(3), (Height - d) / 2, d, d);
+                    tx += Theme.S(18);
+                }
+                else if (it.glyph != "")
+                {
+                    TextRenderer.DrawText(g, it.glyph, Theme.IconsSmall, new Rectangle(tx, 0, Theme.S(18), Height), it.color, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+                    tx += Theme.S(18);
+                }
+                TextRenderer.DrawText(g, it.text, Font, new Rectangle(tx, 0, w, Height), it.glyph == "●" ? Theme.Text : it.color, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+                x += w + Theme.S(6);
+            }
+        }
+    }
+
+    /// <summary>Hang tab ngang kieu Phone Link: bieu tuong + chu, gach chan mau nhan.</summary>
+    public class TabStrip : Control
+    {
+        public event Action<int> Changed;
+        public int Selected { get; private set; }
+        readonly System.Collections.Generic.List<(string glyph, string text)> items = new System.Collections.Generic.List<(string, string)>();
+        readonly System.Collections.Generic.List<int> badges = new System.Collections.Generic.List<int>();
+        int hover = -1;
+
+        public TabStrip()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            Height = Theme.S(44); Font = Theme.UI; Cursor = Cursors.Hand;
+        }
+
+        public void Add(string glyph, string text) { items.Add((glyph, text)); badges.Add(0); Width = TotalWidth(); Invalidate(); }
+        public void SetBadge(int i, int n) { badges[i] = n; Invalidate(); }
+        public void Select(int i) { Selected = i; Invalidate(); Changed?.Invoke(i); }
+
+        int ItemWidth(int i) => Theme.S(12) + Theme.S(24) + TextRenderer.MeasureText(items[i].text, Theme.UIBold).Width + Theme.S(12);
+        int TotalWidth() { int w = 0; for (int i = 0; i < items.Count; i++) w += ItemWidth(i) + Theme.S(4); return w; }
+
+        int HitTest(int x)
+        {
+            int cx = 0;
+            for (int i = 0; i < items.Count; i++) { int w = ItemWidth(i); if (x >= cx && x < cx + w) return i; cx += w + Theme.S(4); }
+            return -1;
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e) { int h = HitTest(e.X); if (h != hover) { hover = h; Invalidate(); } base.OnMouseMove(e); }
+        protected override void OnMouseLeave(EventArgs e) { hover = -1; Invalidate(); base.OnMouseLeave(e); }
+        protected override void OnMouseClick(MouseEventArgs e) { int h = HitTest(e.X); if (h >= 0) Select(h); base.OnMouseClick(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.Clear(BackColor);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            int x = 0;
+            for (int i = 0; i < items.Count; i++)
+            {
+                int w = ItemWidth(i);
+                var r = new Rectangle(x, Theme.S(4), w, Height - Theme.S(10));
+                bool sel = i == Selected;
+                if (hover == i && !sel) using (var p = Theme.Round(r, Theme.S(8))) using (var b = new SolidBrush(Theme.Hover)) g.FillPath(b, p);
+                var fg = sel ? Theme.Text : Theme.Text2;
+                var gr = new Rectangle(x + Theme.S(12), r.Y, Theme.S(20), r.Height);
+                TextRenderer.DrawText(g, items[i].glyph, Theme.IconsSmall, gr, sel ? Theme.AccentText : Theme.Text2, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, items[i].text, sel ? Theme.UIBold : Theme.UI, new Rectangle(gr.Right + Theme.S(6), r.Y, w, r.Height), fg, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+                if (badges[i] > 0)
+                {
+                    string bs = badges[i] > 99 ? "99+" : badges[i].ToString();
+                    int bw = Math.Max(Theme.S(16), TextRenderer.MeasureText(bs, Theme.Tiny).Width + Theme.S(4)), bh = Theme.S(16);
+                    var br = new Rectangle(gr.X + Theme.S(10), r.Y + Theme.S(3), bw, bh);
+                    using (var p = Theme.Round(br, bh / 2)) using (var b = new SolidBrush(Theme.Accent)) g.FillPath(b, p);
+                    TextRenderer.DrawText(g, bs, Theme.Tiny, br, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                }
+                if (sel)
+                {
+                    int lw = Theme.S(18), lh = Theme.S(3);
+                    var lr = new Rectangle(x + (w - lw) / 2, Height - lh - Theme.S(2), lw, lh);
+                    using (var p = Theme.Round(lr, 1)) using (var b = new SolidBrush(Theme.Accent)) g.FillPath(b, p);
+                }
+                x += w + Theme.S(4);
+            }
+        }
+    }
+
+    /// <summary>Anh nho man hinh dien thoai (goc tren cot trai).</summary>
+    public class PhoneThumb : Control
+    {
+        Image img;
+        public Image Image { get => img; set { var old = img; img = value; old?.Dispose(); Invalidate(); } }
+
+        public PhoneThumb()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            Size = Theme.Sz(58, 116);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.Clear(BackColor);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            var r = new Rectangle(0, 0, Width - 1, Height - 1);
+            using (var p = Theme.Round(r, Theme.S(8)))
+            {
+                using (var b = new SolidBrush(Color.FromArgb(30, 32, 38))) g.FillPath(b, p);
+                var ir = Rectangle.Inflate(r, -Theme.S(3), -Theme.S(3));
+                using (var ip = Theme.Round(ir, Theme.S(6)))
+                {
+                    g.FillPath(Brushes.Black, ip);
+                    if (img != null)
+                    {
+                        g.SetClip(ip);
+                        g.InterpolationMode = InterpolationMode.HighQualityBilinear;
+                        float s = Math.Max((float)ir.Width / img.Width, (float)ir.Height / img.Height);
+                        float sw = ir.Width / s, sh = ir.Height / s;
+                        g.DrawImage(img, ir, new RectangleF((img.Width - sw) / 2, (img.Height - sh) / 2, sw, sh), GraphicsUnit.Pixel);
+                        g.ResetClip();
+                    }
+                    else TextRenderer.DrawText(g, "\uE8EA", Theme.Icons, ir, Color.FromArgb(110, 116, 128), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
+                using (var pen = new Pen(Color.FromArgb(70, 76, 88))) g.DrawPath(pen, p);
+            }
+        }
+    }
 }

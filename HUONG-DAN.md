@@ -15,7 +15,9 @@ App **không dùng adb**, nên **không cần bật Tùy chọn nhà phát tri�
 
 > **Lưu ý:** bản này mới được build và kiểm tra trên máy chủ (app Windows và giao diện web đã chạy thử với điện thoại giả lập). **Chưa được chạy trên điện thoại thật và Windows thật.** Nếu có lỗi, bạn gửi ảnh chụp hoặc mô tả để sửa.
 
-> **Mới ở bản 0.6.0 (máy tính):** giao diện Sáng/Tối/Theo Windows (Cài đặt → Giao diện), thanh tiêu đề cùng màu với app, công tắc và ô nhập kiểu Windows 11, cửa sổ Kết nối và Cài đặt làm lại.
+> **Mới ở bản 0.7.0 (máy tính):** bố cục giống Phone Link. Cột trái: ảnh nhỏ màn hình điện thoại, pin, trạng thái kết nối, 4 nút nhanh (làm tối, giữ sáng, khoá máy, chụp màn hình) và danh sách thông báo. Bên phải: tab Màn hình, Ảnh, Tệp, Gõ chữ; nút Cài đặt và Ghim ở góc trên bên phải; thanh nút điều khiển dọc cạnh màn hình điện thoại (nút "…" chứa âm lượng và menu nguồn).
+>
+> **Bản 0.6.0 (máy tính):** giao diện Sáng/Tối/Theo Windows (Cài đặt → Giao diện), thanh tiêu đề cùng màu với app, công tắc và ô nhập kiểu Windows 11, cửa sổ Kết nối và Cài đặt làm lại.
 >
 > **Bản 0.5.0:** mục **Ảnh** để xem và tải ảnh trong điện thoại về máy tính (lần đầu cần bấm "Cho phép xem ảnh" trong app điện thoại, mục Quyền), biểu tượng ứng dụng trong thông báo, tự gửi chữ vừa chép (Ctrl+C) trên máy tính sang điện thoại (tắt được trong Cài đặt), nút ghim cửa sổ luôn nằm trên, khung điện thoại mới.
 >

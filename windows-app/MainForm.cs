@@ -24,17 +24,23 @@ namespace LinkDesk
         string phoneName = "", phoneModel = "", androidVer = "";
 
         // --- khung chinh
-        readonly Panel header = new Panel { Dock = DockStyle.Top, BackColor = Theme.Panel };
-        readonly Panel left = new Panel { Dock = DockStyle.Left, BackColor = Theme.Bg };
+        readonly Panel side = new Panel { Dock = DockStyle.Left, BackColor = Theme.Panel };
+        readonly Panel main = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg };
+        readonly Panel tabBar = new Panel { Dock = DockStyle.Top, BackColor = Theme.Bg };
+        readonly TabStrip tabs = new TabStrip { BackColor = Theme.Bg };
+        readonly Panel pages = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg };
         readonly Panel center = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg };
         readonly ScreenView screen = new ScreenView { Dock = DockStyle.Fill };
-        readonly Panel barHost = new Panel { Dock = DockStyle.Bottom, BackColor = Theme.Bg };
-        readonly Card bar = new Card { FlowDirection = FlowDirection.LeftToRight, Fill = Theme.Panel, Radius = 16 };
-        readonly Label nameLbl = new Label { AutoSize = true, Font = Theme.Big, ForeColor = Theme.Text, BackColor = Theme.Panel };
-        readonly Label subLbl = new Label { AutoSize = true, Font = Theme.Small, ForeColor = Theme.Muted, BackColor = Theme.Panel };
-        readonly Label avatar = new Label { Text = "\uE8EA", Font = Theme.Icons, ForeColor = Theme.AccentText, BackColor = Theme.AccentSoft, TextAlign = ContentAlignment.MiddleCenter };
-        readonly FlowLayoutPanel headerRight = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = Theme.Panel };
-        RoundButton updateBtn, darkBtn, paneBtn;
+        readonly Panel barHost = new Panel { Dock = DockStyle.Right, BackColor = Theme.Bg };
+        readonly Card bar = new Card { FlowDirection = FlowDirection.TopDown, Fill = Theme.Panel, Radius = 16 };
+        readonly PhoneThumb thumb = new PhoneThumb { BackColor = Theme.Panel };
+        readonly Label nameLbl = new Label { AutoSize = false, AutoEllipsis = true, Font = new Font("Segoe UI Semibold", 12f), ForeColor = Theme.Text, BackColor = Theme.Panel };
+        readonly Label modelLbl = new Label { AutoSize = false, AutoEllipsis = true, Font = Theme.Small, ForeColor = Theme.Muted, BackColor = Theme.Panel };
+        readonly Chips subLbl = new Chips { BackColor = Theme.Panel };
+        readonly Chips connChip = new Chips { BackColor = Theme.Panel };
+        readonly FlowLayoutPanel headerRight = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = Theme.Bg };
+        RoundButton awakeTile, clearAllBtn;
+        RoundButton updateBtn, darkBtn;
         readonly Pill toastLabel = new Pill { Visible = false };
         readonly Timer toastTimer = new Timer { Interval = 4000 };
         readonly Timer statsTimer = new Timer { Interval = 1000 };
@@ -42,7 +48,6 @@ namespace LinkDesk
         readonly NotifyIcon tray = new NotifyIcon();
 
         // --- bang trai
-        Segmented tabs;
         readonly FlowLayoutPanel notifFlow = NewPage();
         readonly FlowLayoutPanel filesFlow = NewPage();
         readonly FlowLayoutPanel typeFlow = NewPage();
@@ -77,23 +82,23 @@ namespace LinkDesk
             KeyPreview = true;
             AllowDrop = true;
 
-            header.Height = Theme.S(68);
-            left.Width = Theme.S(390);
-            barHost.Height = Theme.S(76);
+            side.Width = Theme.S(360);
+            tabBar.Height = Theme.S(58);
+            barHost.Width = Theme.S(80);
 
             center.Controls.Add(screen);
             center.Controls.Add(barHost);
-            Controls.Add(center);
-            Controls.Add(left);
-            Controls.Add(header);
-            Controls.Add(new Panel { Dock = DockStyle.Top, Height = 1, BackColor = Theme.Line });
-            Controls.SetChildIndex(header, Controls.Count - 1);
+            pages.Controls.Add(center);
+            main.Controls.Add(pages);
+            main.Controls.Add(new Panel { Dock = DockStyle.Top, Height = 1, BackColor = Theme.Line });
+            main.Controls.Add(tabBar);
+            Controls.Add(main);
+            Controls.Add(new Panel { Dock = DockStyle.Left, Width = 1, BackColor = Theme.Line });
+            Controls.Add(side);
 
             BuildHeader();
             BuildBar();
             BuildLeft();
-            left.Visible = Cfg.SidePanel;
-            paneBtn.Toggled = left.Visible;
 
             screen.SendCmd = o => client?.Send(o);
             screen.BannerClick = () => { if (!screenOn) Key("wake"); };
@@ -116,7 +121,7 @@ namespace LinkDesk
             {
                 ShowFromTray();
                 if (balloonIsUpdate) OfferUpdate(pendingUpdate, true);
-                else { left.Visible = true; tabs.Select(0); }
+                else { }
             };
 
             toastTimer.Tick += (s, e) => { toastTimer.Stop(); toastLabel.Visible = false; };
@@ -137,40 +142,98 @@ namespace LinkDesk
         void OnDragEnter(object s, DragEventArgs e) { if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy; }
         void OnDragDrop(object s, DragEventArgs e)
         {
-            if (e.Data.GetData(DataFormats.FileDrop) is string[] files) { left.Visible = true; tabs.Select(2); foreach (var f in files) Upload(f); }
+            if (e.Data.GetData(DataFormats.FileDrop) is string[] files) { ShowPage(2); foreach (var f in files) Upload(f); }
         }
 
         // ------------------------------------------------------------------ dau trang
         void BuildHeader()
         {
-            int h = header.Height;
-            avatar.Size = Theme.Sz(40, 40);
-            avatar.Location = new Point(Theme.S(18), (h - avatar.Height) / 2);
-            avatar.Paint += (s, e) => { };
-            MakeRound(avatar, Theme.S(20));
-            nameLbl.Location = new Point(Theme.S(70), Theme.S(12));
-            subLbl.Location = new Point(Theme.S(71), Theme.S(40));
+            // --- cot trai: dien thoai
+            var top = new Panel { Dock = DockStyle.Top, Height = Theme.S(150), BackColor = Theme.Panel };
+            thumb.Location = new Point(Theme.S(22), Theme.S(20));
+            int x = thumb.Right + Theme.S(16), w = Theme.S(360) - x - Theme.S(16);
+            nameLbl.SetBounds(x, Theme.S(22), w, Theme.S(26));
+            modelLbl.SetBounds(x, Theme.S(48), w, Theme.S(18));
+            subLbl.Location = new Point(x, Theme.S(72));
+            connChip.Location = new Point(x, Theme.S(102));
+            connChip.Height = Theme.S(30);
+            var recon = new RoundButton("\uE72C", "", BtnStyle.Ghost) { Size = Theme.Sz(30, 30), Radius = 8 };
+            new ToolTip().SetToolTip(recon, "Kết nối lại / chọn điện thoại khác");
+            recon.Click += (s, e) => { if (client != null && client.IsOpen) ShowConnect(null); else if (current != null) Connect(current); else ShowConnect(null); };
+            connChip.SizeChanged += (s, e) => recon.Location = new Point(connChip.Right + Theme.S(4), connChip.Top);
             nameLbl.Text = "LinkDesk";
-            subLbl.Text = "Chưa kết nối";
-            header.Controls.Add(avatar);
-            header.Controls.Add(nameLbl);
-            header.Controls.Add(subLbl);
+            modelLbl.Text = "Chưa kết nối điện thoại";
+            subLbl.Set();
+            connChip.Set(("●", "Chưa kết nối", Theme.Muted));
+            top.Controls.Add(thumb); top.Controls.Add(nameLbl); top.Controls.Add(modelLbl); top.Controls.Add(subLbl); top.Controls.Add(connChip); top.Controls.Add(recon);
+
+            // --- o nut nhanh
+            var tiles = new FlowLayoutPanel { Dock = DockStyle.Top, Height = Theme.S(56), WrapContents = false, Padding = Theme.P(22, 6, 16, 10), BackColor = Theme.Panel };
+            RoundButton Tile(string glyph, string tip, Action a)
+            {
+                var b = new RoundButton(glyph, "", BtnStyle.Soft) { Size = Theme.Sz(72, 38), Radius = 8, Margin = Theme.P(0, 0, 8, 0) };
+                new ToolTip().SetToolTip(b, tip);
+                b.Click += (s, e) => a();
+                tiles.Controls.Add(b);
+                return b;
+            }
+            darkBtn = Tile("\uE708", "Làm tối màn hình điện thoại (máy tính vẫn thấy hình)", () => client?.Send("t", "dark", "on", !LastStatus.B("dark")));
+            awakeTile = Tile("\uE706", "Không cho điện thoại tự tắt màn hình", () => client?.Send("t", "keepAwake", "on", !(LastStatus.Has("keepAwake") ? LastStatus.B("keepAwake") : true)));
+            Tile("\uE72E", "Khoá màn hình điện thoại", () => Key("lock"));
+            Tile("\uE722", "Chụp màn hình (lưu vào Ảnh\\LinkDesk)", Snapshot);
+
+            var sep = new Panel { Dock = DockStyle.Top, Height = Theme.S(17), BackColor = Theme.Panel };
+            sep.Controls.Add(new Panel { BackColor = Theme.Line, Bounds = new Rectangle(Theme.S(22), Theme.S(8), Theme.S(360 - 44), 1) });
+
+            // --- tieu de thong bao
+            var nh = new Panel { Dock = DockStyle.Top, Height = Theme.S(48), BackColor = Theme.Panel };
+            var nt = new Label { Text = "Thông báo", Font = new Font("Segoe UI Semibold", 14f), ForeColor = Theme.Text, AutoSize = true, BackColor = Theme.Panel, Location = new Point(Theme.S(20), Theme.S(8)) };
+            clearAllBtn = new RoundButton("", "Xoá tất cả", BtnStyle.Ghost) { Radius = 8 };
+            clearAllBtn.Font = Theme.Small; clearAllBtn.AutoFit();
+            clearAllBtn.Location = new Point(Theme.S(360) - clearAllBtn.Width - Theme.S(14), Theme.S(8));
+            clearAllBtn.Click += (s, e) => { foreach (var n in notifs.Values.Where(n => n.B("clearable")).ToList()) client?.Send("t", "notifDismiss", "key", n.S("key")); };
+            nh.Controls.Add(nt); nh.Controls.Add(clearAllBtn);
+
+            notifFlow.Visible = true;
+            notifFlow.BackColor = Theme.Panel;
+            side.Controls.Add(notifFlow);
+            side.Controls.Add(nh);
+            side.Controls.Add(sep);
+            side.Controls.Add(tiles);
+            side.Controls.Add(top);
+
+            // --- thanh tab ben phai
+            tabs.Add("\uE8EA", "Màn hình");
+            tabs.Add("\uEB9F", "Ảnh");
+            tabs.Add("\uE8B7", "Tệp");
+            tabs.Add("\uE765", "Gõ chữ");
+            tabs.Location = new Point(Theme.S(16), Theme.S(8));
+            tabs.Changed += i =>
+            {
+                center.Visible = i == 0; photosFlow.Visible = i == 1; filesFlow.Visible = i == 2; typeFlow.Visible = i == 3;
+                if (i == 1) OnPhotosTab();
+                if (i == 0) screen.Focus();
+            };
+            tabBar.Controls.Add(tabs);
 
             var gear = new RoundButton("\uE713", "", BtnStyle.Ghost);
             new ToolTip().SetToolTip(gear, "Cài đặt");
             gear.Click += (s, e) => OpenSettings();
-            updateBtn = new RoundButton("\uE896", "Cập nhật", BtnStyle.Primary) { Visible = false };
-            updateBtn.Click += (s, e) => OfferUpdate(pendingUpdate, true);
-            headerRight.Controls.Add(gear);
             pinBtn = new RoundButton("\uE718", "", BtnStyle.Ghost);
             new ToolTip().SetToolTip(pinBtn, "Luôn nằm trên các cửa sổ khác");
             pinBtn.Click += (s, e) => { Cfg.TopMost = !Cfg.TopMost; Cfg.Save(); ApplyTopMost(); };
+            updateBtn = new RoundButton("\uE896", "Cập nhật", BtnStyle.Primary) { Visible = false };
+            updateBtn.Click += (s, e) => OfferUpdate(pendingUpdate, true);
+            headerRight.Controls.Add(gear);
             headerRight.Controls.Add(pinBtn);
             headerRight.Controls.Add(updateBtn);
-            header.Controls.Add(headerRight);
-            EventHandler place = (s, e) => { headerRight.Location = new Point(header.Width - headerRight.Width - Theme.S(14), (header.Height - headerRight.Height) / 2); headerRight.BringToFront(); };
-            header.Resize += place; headerRight.SizeChanged += place; header.Layout += (s, e) => place(s, e);
+            tabBar.Controls.Add(headerRight);
+            EventHandler place = (s, e) => { headerRight.Location = new Point(tabBar.Width - headerRight.Width - Theme.S(14), (tabBar.Height - headerRight.Height) / 2); headerRight.BringToFront(); };
+            tabBar.Resize += place; headerRight.SizeChanged += place; tabBar.Layout += (s, e) => place(s, e);
         }
+
+        /// <summary>Mo tab ben phai (0 man hinh, 1 anh, 2 tep, 3 go chu).</summary>
+        void ShowPage(int i) => tabs.Select(i);
 
         static void MakeRound(Control c, int r)
         {
@@ -180,7 +243,7 @@ namespace LinkDesk
         // ------------------------------------------------------------------ thanh dieu khien duoi man hinh
         RoundButton BarBtn(string glyph, string tip, Action click)
         {
-            var b = new RoundButton(glyph, "", BtnStyle.Ghost) { Margin = Theme.P(2, 0, 2, 0) };
+            var b = new RoundButton(glyph, "", BtnStyle.Ghost) { Margin = Theme.P(0, 2, 0, 2) };
             b.Size = Theme.Sz(42, 42);
             new ToolTip().SetToolTip(b, tip);
             b.Click += (s, e) => { click(); screen.Focus(); };
@@ -188,13 +251,13 @@ namespace LinkDesk
             return b;
         }
 
-        void BarSep() => bar.Controls.Add(new Panel { Width = 1, Height = Theme.S(26), BackColor = Theme.Line, Margin = Theme.P(6, 8, 6, 8) });
+        void BarSep() => bar.Controls.Add(new Panel { Width = Theme.S(26), Height = 1, BackColor = Theme.Line, Margin = Theme.P(8, 6, 8, 6) });
 
         void Key(string k) => client?.Send("t", "key", "k", k);
 
         void BuildBar()
         {
-            bar.Padding = Theme.P(8, 6, 8, 6);
+            bar.Padding = Theme.P(6, 8, 6, 8);
             bar.Margin = new Padding(0);
             BarBtn("\uE72B", "Quay lại (Esc / chuột phải)", () => Key("back"));
             BarBtn("\uE80F", "Màn hình chính (chuột giữa)", () => Key("home"));
@@ -203,41 +266,35 @@ namespace LinkDesk
             BarBtn("\uEA8F", "Kéo thanh thông báo", () => Key("notifications"));
             BarBtn("\uE9E9", "Cài đặt nhanh", () => Key("quick"));
             BarSep();
-            BarBtn("\uE993", "Giảm âm lượng", () => Key("voldown"));
-            BarBtn("\uE995", "Tăng âm lượng", () => Key("volup"));
-            BarSep();
-            darkBtn = BarBtn("\uE708", "Làm tối màn hình điện thoại (máy tính vẫn thấy hình)", () => client?.Send("t", "dark", "on", !LastStatus.B("dark")));
             BarBtn("\uE706", "Bật sáng màn hình", () => Key("wake"));
             BarBtn("\uE72E", "Khoá màn hình", () => Key("lock"));
-            BarBtn("\uE7E8", "Menu nguồn", () => Key("power"));
             BarSep();
             BarBtn("\uE722", "Chụp màn hình (lưu vào Ảnh\\LinkDesk và chép vào clipboard)", Snapshot);
             BarBtn("\uE740", "Toàn màn hình (F11)", ToggleFullscreen);
-            paneBtn = BarBtn("\uE8A0", "Hiện/ẩn bảng thông báo và tệp", () =>
-            {
-                left.Visible = !left.Visible; paneBtn.Toggled = left.Visible; paneBtn.Invalidate();
-                Cfg.SidePanel = left.Visible; Cfg.Save();
-            });
+            var more = new ContextMenuStrip();
+            more.Items.Add("Tăng âm lượng", null, (s, e) => Key("volup"));
+            more.Items.Add("Giảm âm lượng", null, (s, e) => Key("voldown"));
+            more.Items.Add("Tắt/bật tiếng", null, (s, e) => Key("mute"));
+            more.Items.Add(new ToolStripSeparator());
+            more.Items.Add("Menu nguồn", null, (s, e) => Key("power"));
+            more.Items.Add("Chia đôi màn hình", null, (s, e) => Key("split"));
+            RoundButton moreBtn = null;
+            moreBtn = BarBtn("\uE712", "Thêm: âm lượng, menu nguồn…", () => more.Show(moreBtn, new Point(moreBtn.Width, 0)));
             barHost.Controls.Add(bar);
-            barHost.Resize += (s, e) => bar.Location = new Point(Math.Max(0, (barHost.Width - bar.Width) / 2), Theme.S(4));
+            barHost.Resize += (s, e) => bar.Location = new Point(Math.Max(0, (barHost.Width - bar.Width) / 2 - Theme.S(8)), Math.Max(0, (barHost.Height - bar.Height) / 2));
+            bar.SizeChanged += (s, e) => bar.Location = new Point(Math.Max(0, (barHost.Width - bar.Width) / 2 - Theme.S(8)), Math.Max(0, (barHost.Height - bar.Height) / 2));
         }
 
         // ------------------------------------------------------------------ bang trai
         void BuildLeft()
         {
-            var top = new Panel { Dock = DockStyle.Top, Height = Theme.S(60), BackColor = Theme.Bg };
-            tabs = new Segmented("Thông báo", "Ảnh", "Tệp", "Gõ chữ");
-            tabs.Location = new Point(Theme.S(16), Theme.S(14));
-            top.Controls.Add(tabs);
-            var pages = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg };
-            pages.Controls.Add(notifFlow);
-            pages.Controls.Add(photosFlow);
-            pages.Controls.Add(filesFlow);
-            pages.Controls.Add(typeFlow);
-            left.Controls.Add(pages);
-            left.Controls.Add(top);
-            left.Controls.Add(new Panel { Dock = DockStyle.Right, Width = 1, BackColor = Theme.Line });
-            tabs.Changed += i => { notifFlow.Visible = i == 0; photosFlow.Visible = i == 1; filesFlow.Visible = i == 2; typeFlow.Visible = i == 3; if (i == 1) OnPhotosTab(); };
+            foreach (var pg in new[] { photosFlow, filesFlow, typeFlow })
+            {
+                pages.Controls.Add(pg);
+                pg.Padding = Theme.P(28, 20, 28, 24);
+                var page = pg;
+                page.Resize += (s, e) => { int pad = Math.Max(Theme.S(28), (page.ClientSize.Width - Theme.S(560)) / 2); if (page != photosFlow && page.Padding.Left != pad) page.Padding = new Padding(pad, Theme.S(20), Theme.S(28), Theme.S(24)); };
+            }
             notifFlow.Visible = true;
 
             // --- thong bao
@@ -266,7 +323,7 @@ namespace LinkDesk
             // --- go chu
             var t = PageCard(typeFlow, "\uE765", "Gõ chữ vào điện thoại");
             t.Controls.Add(Wrap("Bấm vào ô nhập trên điện thoại trước, rồi gõ ở đây. Enter để gửi, Shift+Enter để xuống dòng. Bạn cũng có thể bấm lên màn hình điện thoại rồi gõ thẳng bằng bàn phím."));
-            var tbi = new RoundInput(null, true) { Width = Theme.S(320), Margin = Theme.P(0, 10, 0, 0) };
+            var tbi = new RoundInput(null, true) { Width = Theme.S(486), Height = Theme.S(120), Margin = Theme.P(0, 10, 0, 0) };
             var tb = tbi.Box;
             var send = new RoundButton("\uE724", "Gửi sang điện thoại", BtnStyle.Primary) { Margin = Theme.P(0, 8, 0, 0) };
             Action go = () => { if (tb.Text.Length > 0) { client?.Send("t", "text", "s", tb.Text); tb.Text = ""; } };
@@ -281,20 +338,20 @@ namespace LinkDesk
             clipSend.Click += (s, e) => { try { if (Clipboard.ContainsText()) client?.Send("t", "clip", "s", Clipboard.GetText()); } catch { } };
             c.Controls.Add(clipSend);
 
-            tabs.Select(0);
+            ShowPage(0);
         }
 
         Label Wrap(string text)
         {
             var l = Theme.Lbl(text, Theme.UI, Theme.Muted);
-            l.MaximumSize = Theme.Sz(320, 0);
+            l.MaximumSize = Theme.Sz(480, 0);
             return l;
         }
 
         Card PageCard(FlowLayoutPanel page, string glyph, string title)
         {
             var c = new Card();
-            c.MinimumSize = c.MaximumSize = Theme.Sz(352, 0);
+            c.MinimumSize = c.MaximumSize = Theme.Sz(520, 0);
             var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Theme.P(0, 0, 0, 8) };
             row.Controls.Add(new Label { Text = glyph, Font = Theme.IconsSmall, ForeColor = Theme.AccentText, AutoSize = true, Margin = Theme.P(0, 4, 6, 0) });
             row.Controls.Add(new Label { Text = title, Font = Theme.UIBold, ForeColor = Theme.Text, AutoSize = true, Margin = Theme.P(0, 2, 0, 0) });
@@ -317,11 +374,6 @@ namespace LinkDesk
 
         void PlaceToast() => toastLabel.Location = new Point((screen.Width - toastLabel.Width) / 2, screen.Height - toastLabel.Height - Theme.S(18));
 
-        void SetSub(string text, Color color)
-        {
-            subLbl.Text = text;
-            subLbl.ForeColor = color;
-        }
 
         // ------------------------------------------------------------------ ket noi
         protected override void OnShown(EventArgs e)
@@ -443,6 +495,7 @@ namespace LinkDesk
                     phoneName = m.S("name") != "" ? m.S("name") : m.S("model");
                     phoneModel = m.S("model"); androidVer = m.S("android");
                     nameLbl.Text = phoneName;
+                    modelLbl.Text = phoneModel + (androidVer != "" ? " · Android " + androidVer : "");
                     Text = "LinkDesk – " + phoneName;
                     if (current != null && current.Name != phoneName) { current.Name = phoneName; Cfg.Save(); }
                     if (!screen.HasFrame) screen.ClearFrame("Đã kết nối. Đang chờ hình từ điện thoại…");
@@ -483,6 +536,7 @@ namespace LinkDesk
             foreach (var kv in s) LastStatus[kv.Key] = kv.Value;
             notifWarn.Visible = LastStatus.Has("notif") && !LastStatus.B("notif");
             darkBtn.Toggled = LastStatus.B("dark"); darkBtn.Invalidate();
+            awakeTile.Toggled = !LastStatus.Has("keepAwake") || LastStatus.B("keepAwake"); awakeTile.Invalidate();
             if (LastStatus.Has("screenOn")) screenOn = LastStatus.B("screenOn");
             if (LastStatus.Has("mirror")) projecting = LastStatus.B("mirror");
             UpdateBanner();
@@ -512,18 +566,39 @@ namespace LinkDesk
         void UpdateStats()
         {
             var c = client;
-            var parts = new List<string> { "● " + connText };
+            connChip.Set(("●", connText, connColor));
             if (c != null && c.IsOpen)
             {
-                if (LastStatus.Has("battery")) parts.Add("Pin " + LastStatus.L("battery") + "%" + (LastStatus.B("charging") ? " ⚡" : ""));
-                if (LastStatus.Has("control") && !LastStatus.B("control")) parts.Add("chỉ xem (chưa bật Trợ năng)");
+                var chips = new List<(string, string, Color)>();
+                if (LastStatus.Has("battery"))
+                {
+                    long bat = LastStatus.L("battery");
+                    bool chg = LastStatus.B("charging");
+                    string g = ((char)((chg ? 0xEBA0 : 0xE850) + (int)Math.Max(0, Math.Min(10, bat / 10)))).ToString();
+                    chips.Add((g, bat + "%", bat <= 15 && !chg ? Theme.Red : Theme.Text2));
+                }
                 long b = c.BytesReceived;
                 int f = c.FramesReceived; c.FramesReceived = 0;
-                parts.Add(f + "/" + LastStatus.L("fps", 30) + " khung/s · " + ((b - lastBytes) * 8 / 1000) + " kbps");
+                chips.Add(("\uE714", f + "/" + LastStatus.L("fps", 30) + " khung/s", Theme.Text2));
+                if (LastStatus.Has("control") && !LastStatus.B("control")) chips.Add(("\uE7B3", "Chỉ xem", Theme.Orange));
+                subLbl.Set(chips.ToArray());
                 lastBytes = b;
                 if (++statusTick % 15 == 0) c.Send("t", "status");
+                if (statusTick % 2 == 0 && WindowState != FormWindowState.Minimized && Visible) UpdateThumb();
             }
-            SetSub(string.Join("   ·   ", parts), connColor);
+            else subLbl.Set();
+        }
+
+        void UpdateThumb()
+        {
+            using (var full = screen.Snapshot())
+            {
+                if (full == null) return;
+                int tw = thumb.Width * 2, th = Math.Max(1, (int)((long)full.Height * tw / Math.Max(1, full.Width)));
+                var small = new Bitmap(tw, th);
+                using (var g = Graphics.FromImage(small)) { g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear; g.DrawImage(full, 0, 0, tw, th); }
+                thumb.Image = small;
+            }
         }
 
         // ------------------------------------------------------------------ thong bao
@@ -550,7 +625,7 @@ namespace LinkDesk
             foreach (var n in list)
             {
                 string key = n.S("key");
-                var card = new Card { Padding = Theme.P(14, 12, 14, 12), Margin = Theme.P(0, 0, 0, 10) };
+                var card = new Card { Fill = Theme.Bg, Padding = Theme.P(14, 12, 14, 12), Margin = Theme.P(0, 0, 0, 10) };
                 card.MinimumSize = card.MaximumSize = new Size(w, 0);
                 int tw = w - Theme.S(30);
                 var head = new Panel { Width = tw, Height = Theme.S(20), BackColor = card.Fill, Margin = new Padding(0) };
@@ -591,7 +666,7 @@ namespace LinkDesk
             }
             notifEmpty.Visible = list.Count == 0;
             notifFlow.ResumeLayout();
-            tabs.SetLabel(0, list.Count > 0 ? "Thông báo (" + list.Count + ")" : "Thông báo");
+            tabs.Invalidate(); clearAllBtn.Visible = list.Any(n => n.B("clearable"));
         }
 
         // ------------------------------------------------------------------ hanh dong
@@ -643,14 +718,14 @@ namespace LinkDesk
             fullscreen = !fullscreen;
             if (fullscreen)
             {
-                prevState = WindowState; prevLeft = left.Visible;
+                prevState = WindowState; prevLeft = side.Visible;
                 FormBorderStyle = FormBorderStyle.None; WindowState = FormWindowState.Normal; WindowState = FormWindowState.Maximized;
-                left.Visible = false; header.Visible = false;
+                side.Visible = false; tabBar.Visible = false;
             }
             else
             {
                 FormBorderStyle = FormBorderStyle.Sizable; WindowState = prevState;
-                left.Visible = prevLeft; header.Visible = true;
+                side.Visible = prevLeft; tabBar.Visible = true;
             }
         }
 
@@ -680,8 +755,7 @@ namespace LinkDesk
             pendingUpdate = i;
             updateBtn.SetText("Cập nhật " + i.Version.ToString(3));
             updateBtn.Visible = true;
-            header.PerformLayout();
-            headerRight.Location = new Point(header.Width - headerRight.Width - Theme.S(14), (header.Height - headerRight.Height) / 2);
+            tabBar.PerformLayout();
             if (firstTime && Cfg.SkippedVersion != i.Version.ToString())
             {
                 balloonIsUpdate = true;
