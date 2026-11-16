@@ -68,6 +68,26 @@ public final class Commands {
         try { c.sendText(new JSONObject().put("t", "toast").put("msg", msg).toString()); } catch (Exception ignored) {}
     }
 
+    /** Mo link tren dien thoai (trinh duyet hoac app phu hop). */
+    static String openUrl(Context ctx, String url) {
+        url = url == null ? "" : url.trim();
+        if (url.isEmpty()) return "Link trống.";
+        if (!url.matches("(?i)^[a-z][a-z0-9+.-]*:.*")) url = "https://" + url;
+        String scheme = url.substring(0, url.indexOf(':')).toLowerCase(java.util.Locale.ROOT);
+        if (!scheme.equals("http") && !scheme.equals("https") && !scheme.equals("geo") && !scheme.equals("tel") && !scheme.equals("mailto"))
+            return "Chỉ mở được link http, https, geo, tel, mailto.";
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            Context starter = Hub.control != null ? Hub.control : ctx;
+            starter.startActivity(i);
+            if (Hub.control == null && Build.VERSION.SDK_INT >= 29) return "Nếu link không mở, hãy bật Trợ năng cho LinkDesk (Android chặn mở khi chạy nền).";
+            return null;
+        } catch (Exception e) {
+            return "Không mở được link: " + e.getMessage();
+        }
+    }
+
     private static ControlService needControl(WsConn c) {
         ControlService s = Hub.control;
         if (s == null) toast(c, "Chưa bật quyền Trợ năng cho LinkDesk trên điện thoại nên chưa điều khiển được.");
@@ -229,6 +249,11 @@ public final class Commands {
                 String err = MediaApi.launch(ctx, m.optString("pkg"));
                 if (err != null) toast(c, err);
                 else if (Hub.control == null && Build.VERSION.SDK_INT >= 29) toast(c, "Nếu app không mở, hãy bật Trợ năng cho LinkDesk (Android chặn mở app khi chạy nền).");
+                return;
+            }
+            case "openUrl": {
+                String err = openUrl(ctx, m.optString("url"));
+                if (err != null) toast(c, err);
                 return;
             }
             case "view": {

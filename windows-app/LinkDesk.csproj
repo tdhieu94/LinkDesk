@@ -9,7 +9,7 @@
     <RootNamespace>LinkDesk</RootNamespace>
     <ApplicationIcon>linkdesk.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.14.0</Version>
+    <Version>0.15.0</Version>
     <Product>LinkDesk</Product>
     <Description>LinkDesk - xem va dieu khien dien thoai Android</Description>
     <Copyright>LinkDesk</Copyright>

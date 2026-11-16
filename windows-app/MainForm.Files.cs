@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -93,7 +93,7 @@ namespace LinkDesk
         void BuildPhoneFiles()
         {
             var c = PageCard(filesFlow, "", "Tệp trong điện thoại");
-            c.Controls.Add(Wrap("Bấm thư mục để mở, bấm tệp để tải về thư mục Tải xuống\\LinkDesk. Chuột phải để lưu vào chỗ khác."));
+            c.Controls.Add(Wrap("Bấm thư mục để mở, bấm tệp để tải về thư mục Tải xuống\\LinkDesk. Kéo tệp ra Desktop hoặc thư mục để lưu ở đó, chuột phải để chọn chỗ lưu."));
             var quick = new FlowLayoutPanel { AutoSize = true, WrapContents = true, MaximumSize = Theme.Sz(490, 0), Margin = Theme.P(0, 10, 0, 0) };
             foreach (var (label, dir) in new[] { ("Tải xuống", "Download"), ("Ảnh chụp", "DCIM"), ("Tài liệu", "Documents"), ("Ảnh", "Pictures"), ("Phim", "Movies"), ("Nhạc", "Music"), ("Tất cả", "") })
             {
@@ -149,7 +149,9 @@ namespace LinkDesk
                     if (f.B("dir")) row.Click += (s, e) => LoadPhoneDir(rel);
                     else
                     {
-                        row.Click += (s, e) => DownloadPhoneFile(rel, name, null, true);
+                        row.Click += (s, e) => { if (!WasDragged(row)) DownloadPhoneFile(rel, name, null, true); };
+                        long size = f.L("size");
+                        EnableDragOut(row, () => FetchForDrag(rel, name, size));
                         var menu = new ContextMenuStrip();
                         menu.Items.Add("Tải về và mở", null, (s, e) => DownloadPhoneFile(rel, name, null, true));
                         menu.Items.Add("Lưu thành…", null, (s, e) =>
@@ -220,6 +222,7 @@ namespace LinkDesk
                 Directory.CreateDirectory(DownloadDir);
                 Toast("Đang nhận " + name + "…");
                 await c.DownloadTo("/shared", file, null, "id", m.S("id"));
+                if (m.B("clip")) { SetClipboardImageFromPhone(file); return; }
                 Toast("Đã nhận " + Path.GetFileName(file) + " (Tải xuống\\LinkDesk)");
                 if (!Visible || WindowState == FormWindowState.Minimized || !ContainsFocus)
                 {

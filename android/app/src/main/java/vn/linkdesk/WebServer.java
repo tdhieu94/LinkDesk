@@ -174,6 +174,14 @@ public class WebServer {
                 int r = checkPin(ip, q.get("pin"));
                 if (r != 0) { drain(in, headers); sendText(out, 401, "Sai mã PIN"); return; }
                 handleUpload(in, out, headers, q.get("name"));
+            } else if (method.equals("POST") && path.equals("/clipimage")) {
+                int r = checkPin(ip, q.get("pin"));
+                if (r != 0) { drain(in, headers); sendText(out, 401, "Sai mã PIN"); return; }
+                String cl = headers.get("content-length");
+                long len = cl == null ? -1 : Long.parseLong(cl);
+                String err = ClipProvider.receive(ctx, in, len, headers.get("content-type"));
+                if (err != null) { drain(in, headers); sendText(out, 413, err); }
+                else sendText(out, 200, "OK");
             } else if (method.equals("GET") && PhoneApi.handles(path)) {
                 int r = checkPin(ip, q.get("pin"));
                 if (r != 0) { sendText(out, r == 2 ? 429 : 401, "Sai mã PIN"); s.close(); return; }

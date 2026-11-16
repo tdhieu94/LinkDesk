@@ -42,15 +42,24 @@ public class ShareActivity extends Activity {
             return "Đã gửi chữ sang máy tính";
         }
         if (!uris.isEmpty()) {
+            String type = i.getType();
+            boolean oneImage = uris.size() == 1 && type != null && type.startsWith("image/");
             for (Uri u : uris) {
                 String id = FilesApi.addShared(u);
                 Hub.broadcast(new JSONObject().put("t", "incoming").put("id", id)
-                        .put("name", FilesApi.displayName(this, u)).put("size", FilesApi.size(this, u)));
+                        .put("name", FilesApi.displayName(this, u)).put("size", FilesApi.size(this, u))
+                        .put("clip", oneImage));
             }
+            if (oneImage) return "Đang gửi ảnh sang máy tính (tự chép vào clipboard)…";
             return uris.size() == 1 ? "Đang gửi sang máy tính…" : "Đang gửi " + uris.size() + " tệp sang máy tính…";
         }
         CharSequence text = i.getCharSequenceExtra(Intent.EXTRA_TEXT);
         if (text != null && text.length() > 0) {
+            String s = text.toString().trim();
+            if (s.matches("(?i)^https?://\\S+$")) {
+                Hub.broadcast(new JSONObject().put("t", "link").put("url", s));
+                return "Đã mở link trên máy tính";
+            }
             Hub.broadcast(new JSONObject().put("t", "copied").put("s", text.toString()));
             return "Đã chép sang clipboard máy tính";
         }

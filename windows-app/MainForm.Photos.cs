@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -25,7 +25,7 @@ namespace LinkDesk
         void BuildPhotos()
         {
             var c = PageCard(photosFlow, "", "Ảnh gần đây");
-            c.Controls.Add(Wrap("Bấm vào ảnh để mở trên máy tính. Chuột phải để lưu, chép hoặc mở thư mục. Ảnh được lưu vào Ảnh\\LinkDesk."));
+            c.Controls.Add(Wrap("Bấm vào ảnh để mở trên máy tính, kéo ảnh ra Desktop hoặc thư mục để lưu nhanh. Chuột phải để lưu, chép hoặc mở thư mục. Ảnh được lưu vào Ảnh\\LinkDesk."));
             var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Theme.P(0, 10, 0, 0), BackColor = c.Fill };
             photoRefresh = new RoundButton("", "Làm mới", BtnStyle.Soft) { Margin = Theme.P(0, 0, 8, 0) };
             photoRefresh.Click += (s, e) => LoadPhotos();
@@ -92,7 +92,8 @@ namespace LinkDesk
                 {
                     var th = new Thumb { Size = new Size(t, t), Margin = Theme.P(0, 0, 6, 6), Tag = it };
                     new ToolTip().SetToolTip(th, it.S("name") + "\n" + TimeStr(it.L("time")) + " · " + FmtSize(it.L("size")));
-                    th.Click += (s, e) => { if (((MouseEventArgs)e).Button == MouseButtons.Left) OpenPhoto(it, null); };
+                    th.Click += (s, e) => { if (((MouseEventArgs)e).Button == MouseButtons.Left && !WasDragged(th)) OpenPhoto(it, null); };
+                    EnableDragOut(th, () => DownloadPhoto(it, null));
                     th.ContextMenuStrip = PhotoMenu(it);
                     photoGrid.Controls.Add(th);
                 }
@@ -232,8 +233,10 @@ namespace LinkDesk
         void SyncClipboard()
         {
             if (!Cfg.ClipSync || client == null || !client.IsOpen) return;
+            if (DateTime.UtcNow < ignoreClipUntil) return;
             try
             {
+                if (Clipboard.ContainsImage()) { SendClipImage(true); return; }
                 if (!Clipboard.ContainsText()) return;
                 string t = Clipboard.GetText();
                 if (t == "" || t == lastClipFromPhone || t == lastClipSent || t.Length > 100000) return;

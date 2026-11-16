@@ -1,12 +1,12 @@
 {
   "android": {
-    "versionCode": 13,
-    "versionName": "0.12.0",
+    "versionCode": 14,
+    "versionName": "0.13.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.apk"
   },
   "windows": {
-    "version": "0.14.0",
+    "version": "0.15.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.exe"
   },
-  "notes": "Cuộc gọi đến hiện trên máy tính (Nghe/Từ chối), nút Tìm điện thoại và Không làm phiền."
+  "notes": "Mở link trên điện thoại, chép ảnh qua lại giữa máy tính và điện thoại, kéo ảnh/tệp từ điện thoại ra Desktop."
 }

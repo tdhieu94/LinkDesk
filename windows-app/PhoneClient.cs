@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -274,6 +274,16 @@ namespace LinkDesk
                 if (!r.IsSuccessStatusCode) throw new Exception(body);
                 return body;
             }
+        }
+
+        public async Task<string> PostBytes(string path, byte[] data, string type)
+        {
+            var content = new ByteArrayContent(data);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(type);
+            var r = await upHttp.PostAsync(Base + path + "?pin=" + Uri.EscapeDataString(Pin), content).ConfigureAwait(false);
+            string body = await r.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (!r.IsSuccessStatusCode) throw new Exception(body);
+            return body;
         }
 
         public void Dispose()

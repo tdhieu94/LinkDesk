@@ -76,6 +76,12 @@
             </intent-filter>
         </activity>
 
+        <provider
+            android:name=".ClipProvider"
+            android:authorities="vn.linkdesk.clip"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+
         <service
             android:name=".MirrorService"
             android:exported="false"

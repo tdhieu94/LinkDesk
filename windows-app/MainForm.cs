@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -113,6 +113,7 @@ namespace LinkDesk
             var menu = new ContextMenuStrip();
             menu.Items.Add("Mở LinkDesk", null, (s, e) => ShowFromTray());
             menu.Items.Add("Kết nối điện thoại khác…", null, (s, e) => { ShowFromTray(); ShowConnect(null); });
+            menu.Items.Add("Mở link trong clipboard trên điện thoại", null, (s, e) => OpenClipboardLinkOnPhone());
             menu.Items.Add("Chế độ ngân hàng (tắt hết trên điện thoại)", null, (s, e) => BankMode());
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("Thoát", null, (s, e) => ExitApp());
@@ -140,9 +141,10 @@ namespace LinkDesk
             var _ = Handle; // tao handle som de BeginInvoke dung duoc ca khi chay an
         }
 
-        void OnDragEnter(object s, DragEventArgs e) { if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy; }
+        void OnDragEnter(object s, DragEventArgs e) { if (!draggingOut && e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy; }
         void OnDragDrop(object s, DragEventArgs e)
         {
+            if (draggingOut) return;
             if (e.Data.GetData(DataFormats.FileDrop) is string[] files) { ShowPage(5); foreach (var f in files) Upload(f); }
         }
 
@@ -349,8 +351,11 @@ namespace LinkDesk
             var c = PageCard(typeFlow, "\uE77F", "Bộ nhớ tạm");
             c.Controls.Add(Wrap("Ctrl+V trên màn hình điện thoại: dán chữ từ máy tính.\nCtrl+C: chép chữ đang bôi đen trên điện thoại về máy tính."));
             var clipSend = new RoundButton("\uE8C8", "Gửi clipboard sang điện thoại", BtnStyle.Soft) { Margin = Theme.P(0, 10, 0, 0) };
-            clipSend.Click += (s, e) => { try { if (Clipboard.ContainsText()) client?.Send("t", "clip", "s", Clipboard.GetText()); } catch { } };
+            clipSend.Click += (s, e) => { try { if (Clipboard.ContainsImage()) SendClipImage(false); else if (Clipboard.ContainsText()) client?.Send("t", "clip", "s", Clipboard.GetText()); } catch { } };
             c.Controls.Add(clipSend);
+            c.Controls.Add(Wrap("Ảnh: chép ảnh trên máy tính (Ctrl+C, chụp màn hình) là điện thoại có ngay để dán. Trên điện thoại, chia sẻ một ảnh bằng \"Gửi sang máy tính\" là ảnh vào clipboard máy tính."));
+
+            BuildLinkCard(typeFlow);
 
             ShowPage(0);
             InitViewTracking();
@@ -569,6 +574,7 @@ namespace LinkDesk
                 case "notifRemoved": notifs.Remove(m.S("key")); RenderNotifs(); break;
                 case "media": OnMedia(m); break;
                 case "incoming": OnIncoming(m); break;
+                case "link": OnLink(m); break;
                 case "smsChanged": OnSmsChanged(); break;
                 case "ring":
                     if (callPopup == null) callPopup = new CallPopup(cmd => client?.Send("t", cmd));
