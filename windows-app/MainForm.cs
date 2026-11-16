@@ -112,7 +112,11 @@ namespace LinkDesk
             tray.Visible = true;
             var menu = new ContextMenuStrip();
             menu.Items.Add("Mở LinkDesk", null, (s, e) => ShowFromTray());
-            menu.Items.Add("Kết nối điện thoại khác…", null, (s, e) => { ShowFromTray(); ShowConnect(null); });
+            var phonesItem = new ToolStripMenuItem("Điện thoại");
+            phonesItem.DropDownItems.Add("…");
+            menu.Opening += (s, e) => FillPhoneMenu(phonesItem.DropDownItems);
+            menu.Items.Add(phonesItem);
+            menu.Items.Add("Lịch sử thông báo…", null, (s, e) => { ShowFromTray(); ShowHistory(); });
             menu.Items.Add("Mở link trong clipboard trên điện thoại", null, (s, e) => OpenClipboardLinkOnPhone());
             menu.Items.Add("Chế độ ngân hàng (tắt hết trên điện thoại)", null, (s, e) => BankMode());
             menu.Items.Add(new ToolStripSeparator());
@@ -161,8 +165,11 @@ namespace LinkDesk
             connChip.Location = new Point(x, Theme.S(102));
             connChip.Height = Theme.S(30);
             var recon = new RoundButton("\uE72C", "", BtnStyle.Ghost) { Size = Theme.Sz(30, 30), Radius = 8 };
-            new ToolTip().SetToolTip(recon, "Kết nối lại / chọn điện thoại khác");
-            recon.Click += (s, e) => { if (client != null && client.IsOpen) ShowConnect(null); else if (current != null) Connect(current); else ShowConnect(null); };
+            new ToolTip().SetToolTip(recon, "Chuyển điện thoại / kết nối lại");
+            new ToolTip().SetToolTip(nameLbl, "Bấm để chuyển sang điện thoại khác");
+            recon.Click += (s, e) => { if (Cfg.Phones.Count == 0) ShowConnect(null); else ShowPhoneMenu(recon); };
+            nameLbl.Cursor = Cursors.Hand;
+            nameLbl.Click += (s, e) => { if (Cfg.Phones.Count > 0) ShowPhoneMenu(nameLbl); };
             connChip.SizeChanged += (s, e) => recon.Location = new Point(connChip.Right + Theme.S(4), connChip.Top);
             nameLbl.Text = "LinkDesk";
             modelLbl.Text = "Chưa kết nối điện thoại";
@@ -195,7 +202,13 @@ namespace LinkDesk
             clearAllBtn.Font = Theme.Small; clearAllBtn.AutoFit();
             clearAllBtn.Location = new Point(Theme.S(360) - clearAllBtn.Width - Theme.S(14), Theme.S(8));
             clearAllBtn.Click += (s, e) => { foreach (var n in notifs.Values.Where(n => n.B("clearable")).ToList()) client?.Send("t", "notifDismiss", "key", n.S("key")); };
-            nh.Controls.Add(nt); nh.Controls.Add(clearAllBtn);
+            var histBtn = new RoundButton("\uE81C", "", BtnStyle.Ghost) { Size = Theme.Sz(32, 30), Radius = 8 };
+            new ToolTip().SetToolTip(histBtn, "Lịch sử thông báo (tìm kiếm)");
+            histBtn.Click += (s, e) => ShowHistory();
+            nh.Controls.Add(nt); nh.Controls.Add(clearAllBtn); nh.Controls.Add(histBtn);
+            Action placeHist = () => histBtn.Location = new Point((clearAllBtn.Visible ? clearAllBtn.Left : Theme.S(360) - Theme.S(14)) - histBtn.Width - Theme.S(4), Theme.S(8));
+            clearAllBtn.VisibleChanged += (s, e) => placeHist();
+            placeHist();
 
             pages.Controls.Add(smsPage); pages.Controls.Add(callsPage); pages.Controls.Add(appsPage);
             BuildSms(); BuildCalls(); BuildApps();
@@ -553,7 +566,7 @@ namespace LinkDesk
                 case "notifs":
                     notifs.Clear();
                     if (m.TryGetValue("list", out var l) && l is object[] arr)
-                        foreach (var o in arr.OfType<Dictionary<string, object>>()) notifs[o.S("key")] = o;
+                        foreach (var o in arr.OfType<Dictionary<string, object>>()) { notifs[o.S("key")] = o; RecordNotif(o); }
                     RenderNotifs();
                     break;
                 case "notif":
@@ -561,8 +574,9 @@ namespace LinkDesk
                     {
                         bool isNew = !notifs.ContainsKey(nd.S("key"));
                         notifs[nd.S("key")] = nd;
+                        RecordNotif(nd);
                         RenderNotifs();
-                        if (isNew && Cfg.ShowPhoneNotifications && !nd.B("ongoing") && (!Visible || !ContainsFocus || WindowState == FormWindowState.Minimized))
+                        if (isNew && !IsMuted(nd) && Cfg.ShowPhoneNotifications && !nd.B("ongoing") && (!Visible || !ContainsFocus || WindowState == FormWindowState.Minimized))
                         {
                             string title = nd.S("app") + (nd.S("title") != "" ? ": " + nd.S("title") : "");
                             string text = nd.S("text"); if (text.Length > 200) text = text.Substring(0, 200) + "…";
@@ -684,7 +698,7 @@ namespace LinkDesk
                 c.Dispose();
             }
             notifFlow.SuspendLayout();
-            var list = notifs.Values.OrderByDescending(n => n.L("time")).ToList();
+            var list = notifs.Values.Where(n => !IsMuted(n)).OrderByDescending(n => n.L("time")).ToList();
             int w = CardWidth();
             foreach (var n in list)
             {
@@ -707,7 +721,13 @@ namespace LinkDesk
                 var acts = new FlowLayoutPanel { AutoSize = true, Margin = Theme.P(0, 8, 0, 0), WrapContents = false };
                 if (n.B("canOpen")) { var b = new RoundButton("\uE8A7", "Mở", BtnStyle.Soft) { Margin = Theme.P(0, 0, 6, 0) }; b.Click += (s, e) => client?.Send("t", "notifOpen", "key", key); acts.Controls.Add(b); }
                 if (n.B("clearable")) { var b = new RoundButton("\uE711", "Xoá", BtnStyle.Ghost) { Margin = Theme.P(0, 0, 6, 0) }; b.Click += (s, e) => client?.Send("t", "notifDismiss", "key", key); acts.Controls.Add(b); }
-                if (acts.Controls.Count > 0) card.Controls.Add(acts);
+                var more = new RoundButton("\uE712", "", BtnStyle.Ghost) { Size = Theme.Sz(34, 30), Radius = 8, Margin = new Padding(0) };
+                new ToolTip().SetToolTip(more, "Thêm: ẩn thông báo của app này, xem lịch sử");
+                var nn = n;
+                more.Click += (s, e) => NotifMenu(nn).Show(more, new Point(0, more.Height));
+                acts.Controls.Add(more);
+                card.Controls.Add(acts);
+                card.ContextMenuStrip = NotifMenu(n);
                 if (n.B("canReply"))
                 {
                     var r = new FlowLayoutPanel { AutoSize = true, Margin = Theme.P(0, 8, 0, 0), WrapContents = false };

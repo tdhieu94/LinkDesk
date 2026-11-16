@@ -216,17 +216,21 @@ namespace LinkDesk
         {
             base.OnHandleCreated(e);
             try { AddClipboardFormatListener(Handle); } catch { }
+            ApplyHotkey();
         }
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
             try { RemoveClipboardFormatListener(Handle); } catch { }
+            try { if (hotkeyOn) UnregisterHotKey(Handle, HotkeyId); } catch { }
+            hotkeyOn = false;
             base.OnHandleDestroyed(e);
         }
 
         protected override void WndProc(ref Message m)
         {
             if (m.Msg == WM_CLIPBOARDUPDATE) BeginInvoke((Action)SyncClipboard);
+            else if (m.Msg == WM_HOTKEY && (int)m.WParam == HotkeyId) BeginInvoke((Action)OnHotkey);
             base.WndProc(ref m);
         }
 

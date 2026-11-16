@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -138,6 +138,35 @@ namespace LinkDesk
             var clip = Chk("Tự gửi chữ vừa chép trên máy tính sang điện thoại", cfg.ClipSync);
             clip.CheckedChanged += (s, e) => { cfg.ClipSync = clip.Checked; cfg.Save(); };
             a.Controls.Add(startup); a.Controls.Add(tray); a.Controls.Add(notif); a.Controls.Add(clip); a.Controls.Add(upd);
+
+            // --- thong bao
+            var ns = Section(flow, "Thông báo và phím tắt");
+            ns.Controls.Add(Hint("Phím tắt để hiện/ẩn LinkDesk từ bất cứ đâu:"));
+            var hk = new Segmented("Tắt", "Ctrl+Alt+P", "Ctrl+Shift+P", "Ctrl+Alt+L", "Win+Shift+P") { Margin = Theme.P(0, 4, 0, 4) };
+            hk.Select(Math.Max(0, Array.IndexOf(MainForm.HotkeyChoices, cfg.Hotkey ?? "")));
+            var hkLbl = Hint("");
+            hk.Changed += i =>
+            {
+                if (loading) return;
+                cfg.Hotkey = MainForm.HotkeyChoices[i]; cfg.Save();
+                hkLbl.Text = main.ApplyHotkey() ? "" : "Phím tắt này đang bị ứng dụng khác dùng, hãy chọn tổ hợp khác.";
+            };
+            ns.Controls.Add(hk); ns.Controls.Add(hkLbl);
+            var hist = new RoundButton("\uE81C", "Xem lịch sử thông báo…", BtnStyle.Soft) { Margin = Theme.P(0, 8, 0, 8) };
+            hist.Click += (s, e) => main.ShowHistory();
+            ns.Controls.Add(hist);
+            ns.Controls.Add(Hint(cfg.MutedApps.Count == 0
+                ? "Chưa ẩn app nào. Bấm nút … trên một thông báo để ẩn thông báo của app đó."
+                : "Đang ẩn thông báo của các app sau (bấm để hiện lại):"));
+            var muted = new FlowLayoutPanel { AutoSize = true, MaximumSize = Theme.Sz(494, 0), Margin = Theme.P(0, 4, 0, 0) };
+            foreach (var kv in cfg.MutedApps.ToList())
+            {
+                var b = new RoundButton("\uE711", kv.Value, BtnStyle.Soft) { Margin = Theme.P(0, 0, 6, 6) };
+                string pkg = kv.Key;
+                b.Click += (s, e) => { main.MuteApp(pkg, "", false); muted.Controls.Remove(b); b.Dispose(); };
+                muted.Controls.Add(b);
+            }
+            ns.Controls.Add(muted);
 
             // --- dien thoai
             var p = Section(flow, "Điện thoại");

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -33,6 +33,10 @@ namespace LinkDesk
         /// <summary>Video H.264 (thu nghiem).</summary>
         public bool H264 { get; set; } = false;
         public bool TopMost { get; set; }
+        /// <summary>Ung dung bi tat thong bao: pkg -> ten.</summary>
+        public Dictionary<string, string> MutedApps { get; set; } = new Dictionary<string, string>();
+        /// <summary>Phim tat toan cuc hien/an LinkDesk, "" = tat.</summary>
+        public string Hotkey { get; set; } = "Ctrl+Alt+P";
         public string Theme { get; set; } = "dark";
         public string SkippedVersion { get; set; } = "";
         public int WindowWidth { get; set; }

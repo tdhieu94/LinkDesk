@@ -5,8 +5,8 @@
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.apk"
   },
   "windows": {
-    "version": "0.15.0",
+    "version": "0.16.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.exe"
   },
-  "notes": "Mở link trên điện thoại, chép ảnh qua lại giữa máy tính và điện thoại, kéo ảnh/tệp từ điện thoại ra Desktop."
+  "notes": "Lịch sử thông báo có tìm kiếm, ẩn thông báo theo app, phím tắt Ctrl+Alt+P để hiện/ẩn LinkDesk, chuyển nhanh giữa các điện thoại."
 }
