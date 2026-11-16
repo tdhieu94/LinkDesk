@@ -32,7 +32,7 @@ public final class MediaApi {
     private static final Map<String, byte[]> iconCache = new HashMap<>();
 
     public static boolean handles(String path) {
-        return path.equals("/photos") || path.equals("/thumb") || path.equals("/photo") || path.equals("/icon");
+        return path.equals("/photos") || path.equals("/thumb") || path.equals("/photo") || path.equals("/icon") || path.equals("/wallpaper");
     }
 
     public static String photoPermission() {
@@ -47,6 +47,7 @@ public final class MediaApi {
     public static void serve(Context c, String path, Map<String, String> q, OutputStream out) throws IOException {
         try {
             if (path.equals("/icon")) { icon(c, q.get("pkg"), out); return; }
+            if (path.equals("/wallpaper")) { wallpaper(c, out); return; }
             if (!canReadPhotos(c)) { send(out, 403, "text/plain; charset=utf-8", "Chưa cho phép đọc ảnh".getBytes(StandardCharsets.UTF_8), false); return; }
             if (path.equals("/photos")) list(c, q, out);
             else if (path.equals("/thumb")) thumb(c, parseId(q.get("id")), out);
@@ -153,6 +154,56 @@ public final class MediaApi {
             }
         }
         send(out, 200, "image/png", png, true);
+    }
+
+    private static byte[] wallCache;
+
+    /** Hinh nen dien thoai (anh nho). Android 13+ thuong khong cho doc -> ve nen chuyen mau theo mau hinh nen. */
+    private static void wallpaper(Context c, OutputStream out) throws IOException {
+        byte[] body = wallCache;
+        if (body == null) {
+            int w = 360, h = 780;
+            Bitmap b = null;
+            android.app.WallpaperManager wm = android.app.WallpaperManager.getInstance(c);
+            try {
+                Drawable d = wm.getDrawable();
+                if (d != null) {
+                    int iw = Math.max(1, d.getIntrinsicWidth()), ih = Math.max(1, d.getIntrinsicHeight());
+                    float sc = Math.max((float) w / iw, (float) h / ih);
+                    b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                    Canvas cv = new Canvas(b);
+                    int dw = (int) (iw * sc), dh = (int) (ih * sc);
+                    d.setBounds((w - dw) / 2, (h - dh) / 2, (w - dw) / 2 + dw, (h - dh) / 2 + dh);
+                    d.draw(cv);
+                }
+            } catch (Throwable ignored) { b = null; }
+            if (b == null) {
+                int c1 = 0xFF3B4A6B, c2 = 0xFF151A24;
+                try {
+                    if (Build.VERSION.SDK_INT >= 27) {
+                        android.app.WallpaperColors wc = wm.getWallpaperColors(android.app.WallpaperManager.FLAG_SYSTEM);
+                        if (wc != null) {
+                            c1 = wc.getPrimaryColor().toArgb();
+                            c2 = wc.getSecondaryColor() != null ? wc.getSecondaryColor().toArgb() : darker(c1);
+                        }
+                    }
+                } catch (Throwable ignored) {}
+                b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                Canvas cv = new Canvas(b);
+                android.graphics.Paint p = new android.graphics.Paint();
+                p.setShader(new android.graphics.LinearGradient(0, 0, w, h, c1, c2, android.graphics.Shader.TileMode.CLAMP));
+                cv.drawRect(0, 0, w, h, p);
+            }
+            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+            b.compress(Bitmap.CompressFormat.JPEG, 85, bo);
+            body = bo.toByteArray();
+            wallCache = body;
+        }
+        send(out, 200, "image/jpeg", body, false);
+    }
+
+    private static int darker(int c) {
+        return 0xFF000000 | (((c >> 16 & 0xFF) * 6 / 10) << 16) | (((c >> 8 & 0xFF) * 6 / 10) << 8) | ((c & 0xFF) * 6 / 10);
     }
 
     static void send(OutputStream out, int code, String type, byte[] body, boolean cache) throws IOException {

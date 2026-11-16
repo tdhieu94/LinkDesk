@@ -18,8 +18,8 @@ if [ ! -f "$KEYSTORE" ]; then
     -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=LinkDesk"
 fi
 
-VERSION_CODE="${VERSION_CODE:-5}"
-VERSION_NAME="${VERSION_NAME:-0.5.0}"
+VERSION_CODE="${VERSION_CODE:-6}"
+VERSION_NAME="${VERSION_NAME:-0.5.1}"
 rm -rf "$OUT"; mkdir -p "$OUT/gen" "$OUT/classes"
 # Manifest nguon theo kieu Gradle (khong co package/uses-sdk) -> them vao cho aapt
 sed -e "s#<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">#<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" package=\"vn.linkdesk\" android:versionCode=\"$VERSION_CODE\" android:versionName=\"$VERSION_NAME\"><uses-sdk android:minSdkVersion=\"26\" android:targetSdkVersion=\"34\" />#" \

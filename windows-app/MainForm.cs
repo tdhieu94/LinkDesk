@@ -496,6 +496,7 @@ namespace LinkDesk
                     phoneModel = m.S("model"); androidVer = m.S("android");
                     nameLbl.Text = phoneName;
                     modelLbl.Text = phoneModel + (androidVer != "" ? " · Android " + androidVer : "");
+                    LoadWallpaper();
                     Text = "LinkDesk – " + phoneName;
                     if (current != null && current.Name != phoneName) { current.Name = phoneName; Cfg.Save(); }
                     if (!screen.HasFrame) screen.ClearFrame("Đã kết nối. Đang chờ hình từ điện thoại…");
@@ -584,21 +585,22 @@ namespace LinkDesk
                 subLbl.Set(chips.ToArray());
                 lastBytes = b;
                 if (++statusTick % 15 == 0) c.Send("t", "status");
-                if (statusTick % 2 == 0 && WindowState != FormWindowState.Minimized && Visible) UpdateThumb();
             }
             else subLbl.Set();
         }
 
-        void UpdateThumb()
+        /// <summary>Anh nho = hinh nen dien thoai (lay 1 lan khi ket noi), giong Phone Link.</summary>
+        async void LoadWallpaper()
         {
-            using (var full = screen.Snapshot())
+            var c = client;
+            if (c == null) return;
+            try
             {
-                if (full == null) return;
-                int tw = thumb.Width * 2, th = Math.Max(1, (int)((long)full.Height * tw / Math.Max(1, full.Width)));
-                var small = new Bitmap(tw, th);
-                using (var g = Graphics.FromImage(small)) { g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear; g.DrawImage(full, 0, 0, tw, th); }
-                thumb.Image = small;
+                var b = await c.GetBytes("/wallpaper");
+                if (client != c) return;
+                using (var ms = new MemoryStream(b)) thumb.Image = new Bitmap(Image.FromStream(ms));
             }
+            catch { }
         }
 
         // ------------------------------------------------------------------ thong bao
