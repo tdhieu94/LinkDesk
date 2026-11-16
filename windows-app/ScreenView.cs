@@ -39,6 +39,10 @@ namespace LinkDesk
         }
 
         public bool HasFrame => frame != null;
+        public Size FrameSize => new Size(fw, fh);
+        /// <summary>Le nho (cua so nho luon noi).</summary>
+        public bool Compact { get => compact; set { compact = value; chrome?.Dispose(); chrome = null; Invalidate(); } }
+        bool compact;
 
         public void SetFrame(Bitmap b, int w, int h)
         {
@@ -67,7 +71,7 @@ namespace LinkDesk
         Rectangle ImageRect()
         {
             int w = fw > 0 ? fw : 9, h = fh > 0 ? fh : 19;
-            int pad = Theme.S(26);
+            int pad = compact ? Theme.S(12) : Theme.S(26);
             float s = Math.Min((Width - 2f * pad) / w, (Height - 2f * pad) / h);
             if (s <= 0) s = 0.01f;
             int dw = (int)(w * s), dh = (int)(h * s);

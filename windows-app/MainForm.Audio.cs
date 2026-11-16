@@ -36,6 +36,7 @@ namespace LinkDesk
         void OnAudio(PhoneClient c, byte[] data)
         {
             if (client != c || !Cfg.Audio) return;
+            recorder?.AddAudio(data);
             AudioPlayer p;
             lock (playerLock)
             {

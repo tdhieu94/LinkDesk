@@ -72,7 +72,7 @@ namespace LinkDesk
                     {
                         c.FramesReceived++;
                         if (client != c || IsDisposed) { bmp.Dispose(); return; }
-                        try { BeginInvoke(new Action(() => { if (client == c) screen.SetFrame(bmp, fw, fh); else bmp.Dispose(); })); } catch { bmp.Dispose(); }
+                        try { BeginInvoke(new Action(() => { if (client == c) { RecordFrame(bmp, fw, fh); screen.SetFrame(bmp, fw, fh); } else bmp.Dispose(); })); } catch { bmp.Dispose(); }
                     });
                     if (decoder.FramesOut == 0 && ++packetsNoOutput > 90) throw new Exception("không ra hình sau 90 khung");
                 }
@@ -102,7 +102,7 @@ namespace LinkDesk
         bool? lastView;
         System.Windows.Forms.Timer viewTimer;
 
-        bool IsViewing => Visible && WindowState != System.Windows.Forms.FormWindowState.Minimized && center.Visible;
+        bool IsViewing => pip != null || recorder != null || Visible && WindowState != System.Windows.Forms.FormWindowState.Minimized && center.Visible;
 
         void UpdateViewing(bool force = false)
         {

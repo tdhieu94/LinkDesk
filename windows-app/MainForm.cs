@@ -298,7 +298,9 @@ namespace LinkDesk
             BuildAudioButton();
             BarSep();
             BarBtn("\uE722", "Chụp màn hình (lưu vào Ảnh\\LinkDesk và chép vào clipboard)", Snapshot);
+            recBtn = BarBtn("\uE7C8", "Quay màn hình điện thoại thành video (lưu vào Video\\LinkDesk)", ToggleRecord);
             BarBtn("\uE740", "Toàn màn hình (F11)", ToggleFullscreen);
+            BarBtn("\uE8A7", "Cửa sổ nhỏ luôn nổi trên cùng", TogglePip);
             var more = new ContextMenuStrip();
             more.Items.Add("Tăng âm lượng", null, (s, e) => Key("volup"));
             more.Items.Add("Giảm âm lượng", null, (s, e) => Key("voldown"));
@@ -306,8 +308,12 @@ namespace LinkDesk
             more.Items.Add(new ToolStripSeparator());
             more.Items.Add("Menu nguồn", null, (s, e) => Key("power"));
             more.Items.Add("Chia đôi màn hình", null, (s, e) => Key("split"));
+            more.Items.Add(new ToolStripSeparator());
+            more.Items.Add("Xoay ngang", null, (s, e) => Rotate("landscape"));
+            more.Items.Add("Xoay dọc", null, (s, e) => Rotate("portrait"));
+            more.Items.Add("Tự xoay theo điện thoại", null, (s, e) => Rotate("auto"));
             RoundButton moreBtn = null;
-            moreBtn = BarBtn("\uE712", "Thêm: âm lượng, menu nguồn…", () => more.Show(moreBtn, new Point(moreBtn.Width, 0)));
+            moreBtn = BarBtn("\uE712", "Thêm: âm lượng, menu nguồn, xoay màn hình…", () => more.Show(moreBtn, new Point(moreBtn.Width, 0)));
             barHost.Controls.Add(bar);
             barHost.Resize += (s, e) => bar.Location = new Point(Math.Max(0, (barHost.Width - bar.Width) / 2 - Theme.S(8)), Math.Max(0, (barHost.Height - bar.Height) / 2));
             bar.SizeChanged += (s, e) => bar.Location = new Point(Math.Max(0, (barHost.Width - bar.Width) / 2 - Theme.S(8)), Math.Max(0, (barHost.Height - bar.Height) / 2));
@@ -472,7 +478,7 @@ namespace LinkDesk
             c.Frame += (bmp, w, h) =>
             {
                 if (client != c || IsDisposed) { bmp.Dispose(); return; }
-                try { BeginInvoke(new Action(() => { if (client == c) screen.SetFrame(bmp, w, h); else bmp.Dispose(); })); } catch { bmp.Dispose(); }
+                try { BeginInvoke(new Action(() => { if (client == c) { RecordFrame(bmp, w, h); screen.SetFrame(bmp, w, h); } else bmp.Dispose(); })); } catch { bmp.Dispose(); }
             };
             c.Audio += d => OnAudio(c, d);
             c.Video += d => OnVideoPacket(c, d);
@@ -504,6 +510,7 @@ namespace LinkDesk
                 case ConnState.Locked: connText = "Bị khoá tạm do nhập sai PIN"; connColor = Theme.Red; break;
                 case ConnState.Disconnected:
                     StopPlayer();
+                    StopRecord();
                     callPopup?.Hide();
                     connText = "Mất kết nối – đang thử lại"; connColor = Theme.Red;
                     tray.Text = "LinkDesk – mất kết nối";
@@ -663,6 +670,7 @@ namespace LinkDesk
                 int f = c.FramesReceived; c.FramesReceived = 0;
                 chips.Add(("\uE714", f + "/" + LastStatus.L("fps", 30) + " khung/s", Theme.Text2));
                 if (!c.Secure) chips.Add(("\uE7BA", "Chưa mã hoá", Theme.Orange));
+                var rc = RecordChip(); if (rc != null) chips.Add(("\uE7C8", rc, Theme.Red));
                 if (LastStatus.Has("control") && !LastStatus.B("control")) chips.Add(("\uE7B3", "Chỉ xem", Theme.Orange));
                 subLbl.Set(chips.ToArray());
                 RxPerSec = b - lastBytes; FpsNow = f;
@@ -901,6 +909,7 @@ namespace LinkDesk
         public void ShowFromTray()
         {
             startHidden = false;
+            if (pip != null) { pip.Close(); return; }
             Show();
             if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
             Activate();
@@ -944,6 +953,7 @@ namespace LinkDesk
             Cfg.Save();
             client?.Dispose();
             StopPlayer();
+            try { recorder?.Stop(); } catch { }
             tray.Visible = false;
             tray.Dispose();
             base.OnFormClosing(e);

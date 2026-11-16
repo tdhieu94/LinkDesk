@@ -36,6 +36,10 @@ namespace LinkDesk
         public bool H264 { get; set; } = false;
         public bool TopMost { get; set; }
         public bool PhotoBackup { get; set; }
+        public int PipX { get; set; }
+        public int PipY { get; set; }
+        public int PipW { get; set; }
+        public int PipH { get; set; }
         public string BackupDir { get; set; } = "";
         /// <summary>Ung dung bi tat thong bao: pkg -> ten.</summary>
         public Dictionary<string, string> MutedApps { get; set; } = new Dictionary<string, string>();

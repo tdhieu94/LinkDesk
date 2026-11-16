@@ -69,6 +69,31 @@ public final class Commands {
         try { c.sendText(new JSONObject().put("t", "toast").put("msg", msg).toString()); } catch (Exception ignored) {}
     }
 
+    /** Xoay man hinh: landscape / portrait / auto. Can quyen "Sua doi cai dat he thong". */
+    static String rotate(Context ctx, String mode) {
+        if (Build.VERSION.SDK_INT >= 23 && !android.provider.Settings.System.canWrite(ctx)) {
+            try {
+                Intent i = new Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS, android.net.Uri.parse("package:" + ctx.getPackageName()));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                (Hub.control != null ? Hub.control : ctx).startActivity(i);
+            } catch (Exception ignored) {}
+            return "Trên điện thoại, bật \"Cho phép sửa đổi cài đặt hệ thống\" cho LinkDesk (vừa mở sẵn), rồi bấm xoay lại.";
+        }
+        android.content.ContentResolver cr = ctx.getContentResolver();
+        try {
+            if ("auto".equals(mode)) {
+                android.provider.Settings.System.putInt(cr, android.provider.Settings.System.ACCELEROMETER_ROTATION, 1);
+                return null;
+            }
+            android.provider.Settings.System.putInt(cr, android.provider.Settings.System.ACCELEROMETER_ROTATION, 0);
+            android.provider.Settings.System.putInt(cr, android.provider.Settings.System.USER_ROTATION,
+                    "landscape".equals(mode) ? android.view.Surface.ROTATION_90 : android.view.Surface.ROTATION_0);
+            return "landscape".equals(mode) ? "Đã xoay ngang. App nào chỉ cho màn hình dọc thì vẫn giữ dọc." : null;
+        } catch (Exception e) {
+            return "Không xoay được: " + e.getMessage();
+        }
+    }
+
     /** Mo link tren dien thoai (trinh duyet hoac app phu hop). */
     static String openUrl(Context ctx, String url) {
         url = url == null ? "" : url.trim();
@@ -250,6 +275,11 @@ public final class Commands {
                 String err = MediaApi.launch(ctx, m.optString("pkg"));
                 if (err != null) toast(c, err);
                 else if (Hub.control == null && Build.VERSION.SDK_INT >= 29) toast(c, "Nếu app không mở, hãy bật Trợ năng cho LinkDesk (Android chặn mở app khi chạy nền).");
+                return;
+            }
+            case "rotate": {
+                String err = rotate(ctx, m.optString("mode"));
+                if (err != null) toast(c, err);
                 return;
             }
             case "openUrl": {
