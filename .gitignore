@@ -7,4 +7,3 @@ windows-app/obj/
 .gradle/
 android/app/build/
 local.properties
-dist/

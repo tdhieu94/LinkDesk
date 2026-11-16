@@ -175,4 +175,4 @@ Từ bản 0.4.0, bạn **không cần tự tải lại app** mỗi khi có bả
 
 - **Máy tính:** app tự kiểm tra lúc mở và mỗi 6 tiếng. Khi có bản mới, Windows hiện thông báo và nút **Cập nhật x.y.z** xuất hiện ở góc trên bên phải. Bấm vào, app tự tải, tự cài và mở lại. Có thể tắt ở Cài đặt → "Tự kiểm tra bản cập nhật", và có nút "Kiểm tra cập nhật" để kiểm tra ngay.
 - **Điện thoại:** mở app LinkDesk, nếu có bản mới sẽ thấy thẻ **"Có bản mới …"** ở đầu màn hình. Bấm **Cập nhật**, app tự tải về. Lần đầu Android sẽ hỏi quyền **"Cài đặt ứng dụng không xác định"** cho LinkDesk, bạn cho phép một lần. Sau đó Android vẫn hỏi xác nhận "Cập nhật?" mỗi lần (Android bắt buộc), bạn bấm **Cập nhật**.
-- Bản mới được đăng ở trang phát hành của repo GitHub `tdhieu94/LinkDesk`. Sau khi cập nhật điện thoại, nhớ kiểm tra lại Trợ năng vẫn bật (Xiaomi đôi khi tắt quyền này sau khi cập nhật app).
+- Bản mới được đăng trong thư mục `releases/` của repo GitHub `tdhieu94/LinkDesk` (tải trực tiếp ở đó nếu cần). Sau khi cập nhật điện thoại, nhớ kiểm tra lại Trợ năng vẫn bật (Xiaomi đôi khi tắt quyền này sau khi cập nhật app).

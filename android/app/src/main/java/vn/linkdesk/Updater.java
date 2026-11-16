@@ -23,11 +23,11 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 /**
- * Kiem tra ban moi tren GitHub Releases (tdhieu94/LinkDesk) va cai bang PackageInstaller.
+ * Kiem tra ban moi tren repo GitHub tdhieu94/LinkDesk (thu muc releases/) va cai bang PackageInstaller.
  * Android luon hien hop thoai xac nhan "Cap nhat" cho app cai ngoai CH Play.
  */
 public final class Updater {
-    public static final String VERSION_URL = "https://github.com/tdhieu94/LinkDesk/releases/latest/download/version.json";
+    public static final String VERSION_URL = "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/version.json";
     private static final String TAG = "LinkDesk.Upd";
     private static final String ACTION_INSTALL = "vn.linkdesk.INSTALL_RESULT";
 

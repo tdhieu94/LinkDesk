@@ -9,11 +9,11 @@ using System.Windows.Forms;
 
 namespace LinkDesk
 {
-    /// <summary>Kiem tra va cai ban moi tu GitHub Releases (tdhieu94/LinkDesk).</summary>
+    /// <summary>Kiem tra va cai ban moi tu repo GitHub tdhieu94/LinkDesk (thu muc releases/).</summary>
     public static class Updater
     {
-        public const string VersionUrl = "https://github.com/tdhieu94/LinkDesk/releases/latest/download/version.json";
-        public const string ReleasesPage = "https://github.com/tdhieu94/LinkDesk/releases/latest";
+        public const string VersionUrl = "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/version.json";
+        public const string ReleasesPage = "https://github.com/tdhieu94/LinkDesk/tree/main/releases";
 
         public class Info
         {
