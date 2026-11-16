@@ -333,9 +333,9 @@ public class MainActivity extends Activity {
         });
         perms.addView(smsBtn);
         perms.addView(divider());
-        callChip = permRow(perms, "Cuộc gọi", "Xem cuộc gọi gần đây, gọi điện từ máy tính");
+        callChip = permRow(perms, "Cuộc gọi", "Xem cuộc gọi gần đây, gọi điện, báo và nghe máy cuộc gọi đến từ máy tính");
         callBtn = button("Cho phép cuộc gọi", BLUE_SOFT, BLUE, new View.OnClickListener() {
-            @Override public void onClick(View v) { askRuntime(new String[]{android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.CALL_PHONE, android.Manifest.permission.READ_CONTACTS, "android.permission.ANSWER_PHONE_CALLS"}); }
+            @Override public void onClick(View v) { askRuntime(PhoneApi.CALL_PERMS); }
         });
         perms.addView(callBtn);
         perms.addView(divider());
@@ -448,7 +448,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onResume() { super.onResume(); h.post(tick); checkUpdate(); }
-    @Override public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); PhoneApi.watch(getApplicationContext()); MirrorService ms = Hub.mirror; if (ms != null) ms.refreshForeground(); Commands.broadcastStatus(this); }
+    @Override public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); PhoneApi.watch(getApplicationContext()); PhoneApi.watchCalls(getApplicationContext()); MirrorService ms = Hub.mirror; if (ms != null) ms.refreshForeground(); Commands.broadcastStatus(this); }
     @Override protected void onPause() { super.onPause(); h.removeCallbacks(tick); }
 
     private boolean notifGranted() {
@@ -511,7 +511,7 @@ public class MainActivity extends Activity {
         if (photos) setChip(photoChip, "Đã cho phép", GREEN, GREEN_SOFT);
         else setChip(photoChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
         photoBtn.setVisibility(photos ? View.GONE : View.VISIBLE);
-        boolean sms = PhoneApi.canSms(this), calls = PhoneApi.canCalls(this);
+        boolean sms = PhoneApi.canSms(this), calls = PhoneApi.canCalls(this) && checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED;
         if (sms) setChip(smsChip, "Đã cho phép", GREEN, GREEN_SOFT); else setChip(smsChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
         smsBtn.setVisibility(sms ? View.GONE : View.VISIBLE);
         if (calls) setChip(callChip, "Đã cho phép", GREEN, GREEN_SOFT); else setChip(callChip, "Chưa cấp", ORANGE, ORANGE_SOFT);

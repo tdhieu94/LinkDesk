@@ -188,4 +188,23 @@ public class NotifService extends NotificationListenerService {
     public void dismiss(String key) {
         cancelNotification(key);
     }
+
+    // ---- Khong lam phien (dich vu doc thong bao duoc phep doi)
+    public boolean isDnd() {
+        try { return getCurrentInterruptionFilter() > INTERRUPTION_FILTER_ALL; } catch (Exception e) { return false; }
+    }
+
+    public String setDnd(boolean on) {
+        try {
+            requestInterruptionFilter(on ? INTERRUPTION_FILTER_PRIORITY : INTERRUPTION_FILTER_ALL);
+            return null;
+        } catch (Exception e) {
+            return "Không đổi được Không làm phiền: " + e.getMessage();
+        }
+    }
+
+    @Override
+    public void onInterruptionFilterChanged(int interruptionFilter) {
+        Commands.broadcastStatus(this);
+    }
 }

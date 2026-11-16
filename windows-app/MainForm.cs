@@ -39,7 +39,8 @@ namespace LinkDesk
         readonly Chips subLbl = new Chips { BackColor = Theme.Panel };
         readonly Chips connChip = new Chips { BackColor = Theme.Panel };
         readonly FlowLayoutPanel headerRight = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = Theme.Bg };
-        RoundButton awakeTile, clearAllBtn;
+        RoundButton awakeTile, clearAllBtn, dndTile, findTile;
+        CallPopup callPopup;
         RoundButton updateBtn, darkBtn;
         readonly Pill toastLabel = new Pill { Visible = false };
         readonly Timer toastTimer = new Timer { Interval = 4000 };
@@ -179,8 +180,8 @@ namespace LinkDesk
             }
             darkBtn = Tile("\uE708", "Làm tối màn hình điện thoại (máy tính vẫn thấy hình)", () => client?.Send("t", "dark", "on", !LastStatus.B("dark")));
             awakeTile = Tile("\uE706", "Không cho điện thoại tự tắt màn hình", () => client?.Send("t", "keepAwake", "on", !(LastStatus.Has("keepAwake") ? LastStatus.B("keepAwake") : true)));
-            Tile("\uE72E", "Khoá màn hình điện thoại", () => Key("lock"));
-            Tile("\uE722", "Chụp màn hình (lưu vào Ảnh\\LinkDesk)", Snapshot);
+            dndTile = Tile("\uE7ED", "Không làm phiền trên điện thoại", () => client?.Send("t", "dnd", "on", !LastStatus.B("dnd")));
+            findTile = Tile("\uE721", "Tìm điện thoại: đổ chuông thật to (kể cả khi để im lặng)", () => client?.Send("t", "findPhone", "on", !LastStatus.B("finding")));
 
             var sep = new Panel { Dock = DockStyle.Top, Height = Theme.S(17), BackColor = Theme.Panel };
             sep.Controls.Add(new Panel { BackColor = Theme.Line, Bounds = new Rectangle(Theme.S(22), Theme.S(8), Theme.S(360 - 44), 1) });
@@ -483,6 +484,7 @@ namespace LinkDesk
                 case ConnState.Locked: connText = "Bị khoá tạm do nhập sai PIN"; connColor = Theme.Red; break;
                 case ConnState.Disconnected:
                     StopPlayer();
+                    callPopup?.Hide();
                     connText = "Mất kết nối – đang thử lại"; connColor = Theme.Red;
                     tray.Text = "LinkDesk – mất kết nối";
                     screen.Banner = null;
@@ -568,6 +570,16 @@ namespace LinkDesk
                 case "media": OnMedia(m); break;
                 case "incoming": OnIncoming(m); break;
                 case "smsChanged": OnSmsChanged(); break;
+                case "ring":
+                    if (callPopup == null) callPopup = new CallPopup(cmd => client?.Send("t", cmd));
+                    callPopup.Ringing(m.S("name"), m.S("number"));
+                    if (Cfg.ShowPhoneNotifications && !Visible) tray.ShowBalloonTip(5000, "Cuộc gọi đến", m.S("name") != "" ? m.S("name") : m.S("number"), ToolTipIcon.None);
+                    break;
+                case "callState":
+                    if (m.S("state") == "offhook") callPopup?.InCall();
+                    else callPopup?.Hide();
+                    if (callsLoaded) LoadCalls();
+                    break;
                 case "callsChanged": if (callsLoaded) LoadCalls(); break;
             }
         }
@@ -578,6 +590,8 @@ namespace LinkDesk
             notifWarn.Visible = LastStatus.Has("notif") && !LastStatus.B("notif");
             darkBtn.Toggled = LastStatus.B("dark"); darkBtn.Invalidate();
             awakeTile.Toggled = !LastStatus.Has("keepAwake") || LastStatus.B("keepAwake"); awakeTile.Invalidate();
+            dndTile.Toggled = LastStatus.B("dnd"); dndTile.Invalidate();
+            findTile.Toggled = LastStatus.B("finding"); findTile.Invalidate();
             if (LastStatus.Has("screenOn")) screenOn = LastStatus.B("screenOn");
             if (LastStatus.Has("mirror")) projecting = LastStatus.B("mirror");
             UpdateBanner();

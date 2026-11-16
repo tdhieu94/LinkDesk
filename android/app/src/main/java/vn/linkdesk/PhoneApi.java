@@ -29,7 +29,7 @@ public final class PhoneApi {
     private PhoneApi() {}
 
     public static final String[] SMS_PERMS = {Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_CONTACTS};
-    public static final String[] CALL_PERMS = {Manifest.permission.READ_CALL_LOG, Manifest.permission.CALL_PHONE, Manifest.permission.READ_CONTACTS};
+    public static final String[] CALL_PERMS = {Manifest.permission.READ_CALL_LOG, Manifest.permission.CALL_PHONE, Manifest.permission.READ_CONTACTS, Manifest.permission.READ_PHONE_STATE, "android.permission.ANSWER_PHONE_CALLS"};
 
     static boolean has(Context c, String p) { return c.checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED; }
     public static boolean canSms(Context c) { return has(c, Manifest.permission.READ_SMS) && has(c, Manifest.permission.SEND_SMS); }
@@ -188,6 +188,47 @@ public final class PhoneApi {
             return null;
         } catch (SecurityException e) { return "Không gọi được: thiếu quyền."; }
         catch (Exception e) { return "Không gọi được: " + e.getMessage(); }
+    }
+
+    public static String answerCall(Context c) {
+        try {
+            TelecomManager tm = (TelecomManager) c.getSystemService(Context.TELECOM_SERVICE);
+            if (has(c, "android.permission.ANSWER_PHONE_CALLS")) { tm.acceptRingingCall(); return null; }
+            return "Điện thoại chưa cho phép nghe máy: mở app LinkDesk, mục Quyền, bấm \"Cho phép cuộc gọi\".";
+        } catch (Exception e) { return "Không nghe máy được: " + e.getMessage(); }
+    }
+
+    // ---- bao cuoc goi den
+    private static android.content.BroadcastReceiver callRx;
+    private static String lastRingNumber;
+    public static volatile String callState = "idle";
+
+    public static void watchCalls(final Context c) {
+        if (callRx != null || !has(c, Manifest.permission.READ_PHONE_STATE)) return;
+        callRx = new android.content.BroadcastReceiver() {
+            @Override public void onReceive(Context cx, android.content.Intent i) {
+                String st = i.getStringExtra(android.telephony.TelephonyManager.EXTRA_STATE);
+                String num = i.getStringExtra(android.telephony.TelephonyManager.EXTRA_INCOMING_NUMBER);
+                try {
+                    if (android.telephony.TelephonyManager.EXTRA_STATE_RINGING.equals(st)) {
+                        // Android gui 2 lan (1 lan co so); chi bao lai khi co them so
+                        if ("ringing".equals(callState) && (num == null || num.equals(lastRingNumber))) return;
+                        callState = "ringing"; lastRingNumber = num;
+                        Hub.broadcast(new JSONObject().put("t", "ring").put("number", num == null ? "" : num).put("name", num == null ? "" : name(cx, num)));
+                    } else if (android.telephony.TelephonyManager.EXTRA_STATE_OFFHOOK.equals(st)) {
+                        if ("offhook".equals(callState)) return;
+                        callState = "offhook";
+                        Hub.broadcast(new JSONObject().put("t", "callState").put("state", "offhook"));
+                    } else if (android.telephony.TelephonyManager.EXTRA_STATE_IDLE.equals(st)) {
+                        if ("idle".equals(callState)) return;
+                        callState = "idle"; lastRingNumber = null;
+                        Hub.broadcast(new JSONObject().put("t", "callState").put("state", "idle"));
+                    }
+                } catch (Exception ignored) {}
+            }
+        };
+        try { c.registerReceiver(callRx, new android.content.IntentFilter(android.telephony.TelephonyManager.ACTION_PHONE_STATE_CHANGED)); }
+        catch (Exception e) { callRx = null; }
     }
 
     public static String endCall(Context c) {

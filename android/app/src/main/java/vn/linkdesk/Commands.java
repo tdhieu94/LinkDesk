@@ -42,6 +42,9 @@ public final class Commands {
                 .put("quality", Prefs.getQuality(ctx))
                 .put("fps", Prefs.getFps(ctx))
                 .put("audio", AudioStreamer.isRunning())
+                .put("finding", FindPhone.isRinging())
+                .put("dnd", Hub.notif != null && Hub.notif.isDnd())
+                .put("callState", PhoneApi.callState)
                 .put("codec", Hub.mirror != null && Hub.mirror.isH264() ? "h264" : "jpeg")
                 .put("audioOk", AudioStreamer.supported() && AudioStreamer.permitted(ctx));
         try {
@@ -160,6 +163,21 @@ public final class Commands {
             case "call": {
                 String err = PhoneApi.call(ctx, m.optString("number"));
                 toast(c, err != null ? err : "Đang gọi " + m.optString("number") + " trên điện thoại");
+                return;
+            }
+            case "answerCall": {
+                String err = PhoneApi.answerCall(ctx);
+                if (err != null) toast(c, err);
+                return;
+            }
+            case "findPhone":
+                if (m.optBoolean("on", true)) FindPhone.start(ctx); else FindPhone.stop(ctx);
+                return;
+            case "dnd": {
+                NotifService ns = Hub.notif;
+                if (ns == null) { toast(c, "Cần bật quyền đọc thông báo cho LinkDesk để đổi Không làm phiền."); return; }
+                String err = ns.setDnd(m.optBoolean("on"));
+                if (err != null) toast(c, err);
                 return;
             }
             case "endCall": {

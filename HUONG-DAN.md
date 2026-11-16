@@ -15,6 +15,8 @@ App **không dùng adb**, nên **không cần bật Tùy chọn nhà phát tri�
 
 > **Lưu ý:** bản này mới được build và kiểm tra trên máy chủ (app Windows và giao diện web đã chạy thử với điện thoại giả lập). **Chưa được chạy trên điện thoại thật và Windows thật.** Nếu có lỗi, bạn gửi ảnh chụp hoặc mô tả để sửa.
 
+> **Mới ở bản 0.14.0 (máy tính) + 0.12.0 (điện thoại):** **cuộc gọi đến hiện trên máy tính** (góc dưới bên phải) với nút **Nghe** / **Từ chối**; bạn vẫn nói chuyện bằng điện thoại hoặc tai nghe. Cần bấm lại "Cho phép cuộc gọi" trong app điện thoại một lần để cấp thêm quyền trạng thái cuộc gọi. Hai ô nhanh mới ở cột trái: **Không làm phiền** (cần quyền Thông báo) và **Tìm điện thoại** (đổ chuông báo thức to nhất trong tối đa 60 giây, kể cả khi để im lặng; mở khoá điện thoại hoặc chạm thông báo để tắt). Nút khoá và chụp màn hình vẫn ở thanh dọc bên phải.
+
 > **Mới ở bản 0.13.0 (máy tính) + 0.11.0 (điện thoại):** tab **Ứng dụng**: xem các app trên điện thoại, gõ để tìm (không cần dấu), bấm là app mở trên điện thoại (nên bật Trợ năng để Android cho mở khi LinkDesk chạy nền). **Tối ưu**: khi bạn thu nhỏ cửa sổ hoặc chuyển sang tab khác, điện thoại ngừng gửi hình nên đỡ tốn pin và WiFi; máy tính giải nén hình ở luồng riêng và vẽ nhẹ hơn nên mượt hơn. Thanh tab tự gọn lại khi cửa sổ hẹp.
 
 > **Mới ở bản 0.12.0 (máy tính) + 0.10.0 (điện thoại):** **video H.264 (thử nghiệm)**: hình mượt hơn và tốn mạng ít hơn so với gửi từng ảnh JPEG, giống cách scrcpy làm. Bật trong Cài đặt > Hình ảnh > "Video H.264". Máy tính dùng bộ giải mã có sẵn của Windows; nếu không giải mã được, app tự quay về chế độ ảnh. Nếu hình lỗi màu, nhoè hoặc đứng, hãy tắt mục này.
