@@ -121,7 +121,7 @@ namespace LinkDesk
             {
                 ShowFromTray();
                 if (balloonIsUpdate) OfferUpdate(pendingUpdate, true);
-                else { }
+                else if (lastReceived != null) { try { System.Diagnostics.Process.Start("explorer.exe", "/select,\"" + lastReceived + "\""); } catch { } lastReceived = null; }
             };
 
             toastTimer.Tick += (s, e) => { toastTimer.Stop(); toastLabel.Visible = false; };
@@ -198,6 +198,7 @@ namespace LinkDesk
             notifFlow.BackColor = Theme.Panel;
             side.Controls.Add(notifFlow);
             side.Controls.Add(nh);
+            side.Controls.Add(BuildMediaCard());
             side.Controls.Add(sep);
             side.Controls.Add(tiles);
             side.Controls.Add(top);
@@ -212,6 +213,7 @@ namespace LinkDesk
             {
                 center.Visible = i == 0; photosFlow.Visible = i == 1; filesFlow.Visible = i == 2; typeFlow.Visible = i == 3;
                 if (i == 1) OnPhotosTab();
+                if (i == 2) OnFilesTab();
                 if (i == 0) screen.Focus();
             };
             tabBar.Controls.Add(tabs);
@@ -319,6 +321,7 @@ namespace LinkDesk
             };
             f.Controls.Add(pick);
             f.Controls.Add(uploadList);
+            BuildPhoneFiles();
 
             // --- go chu
             var t = PageCard(typeFlow, "\uE765", "Gõ chữ vào điện thoại");
@@ -423,7 +426,8 @@ namespace LinkDesk
             phoneName = e.Name;
             nameLbl.Text = string.IsNullOrEmpty(e.Name) ? e.Host : e.Name;
             notifs.Clear(); RenderNotifs();
-            photosLoaded = false; photoGen++; iconPending.Clear();
+            photosLoaded = false; photoGen++; iconPending.Clear(); phoneFilesLoaded = false; filesGen++;
+            if (mediaCard != null) mediaCard.Parent.Visible = false;
             foreach (Control x in photoGrid.Controls.Cast<Control>().ToList()) { photoGrid.Controls.Remove(x); x.Dispose(); }
             photoInfo.Text = "";
             screen.Banner = null;
@@ -523,12 +527,14 @@ namespace LinkDesk
                         {
                             string title = nd.S("app") + (nd.S("title") != "" ? ": " + nd.S("title") : "");
                             string text = nd.S("text"); if (text.Length > 200) text = text.Substring(0, 200) + "…";
-                            balloonIsUpdate = false;
+                            balloonIsUpdate = false; lastReceived = null;
                             tray.ShowBalloonTip(6000, title, text == "" ? " " : text, ToolTipIcon.None);
                         }
                     }
                     break;
                 case "notifRemoved": notifs.Remove(m.S("key")); RenderNotifs(); break;
+                case "media": OnMedia(m); break;
+                case "incoming": OnIncoming(m); break;
             }
         }
 

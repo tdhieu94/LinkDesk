@@ -44,8 +44,8 @@ public class MainActivity extends Activity {
 
     private TextView heroTitle, heroSub, addrText, pinText, statusDot;
     private Button mainBtn;
-    private TextView controlChip, notifChip, photoChip;
-    private Button controlBtn, notifBtn, photoBtn;
+    private TextView controlChip, notifChip, photoChip, fileChip;
+    private Button controlBtn, notifBtn, photoBtn, fileBtn;
     private LinearLayout updateCard;
     private TextView updateText;
     private Button updateBtn;
@@ -314,6 +314,24 @@ public class MainActivity extends Activity {
             }
         });
         perms.addView(photoBtn);
+        perms.addView(divider());
+        fileChip = permRow(perms, "Tệp", "Duyệt và tải tệp trong điện thoại về máy tính");
+        fileBtn = button("Cho phép truy cập tệp", BLUE_SOFT, BLUE, new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                Intent i = FilesApi.permissionIntent(MainActivity.this);
+                if (i != null) { try { startActivity(i); } catch (Exception e) { startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)); } }
+                else requestPermissions(new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, REQ_PERMS);
+            }
+        });
+        perms.addView(fileBtn);
+
+        // ---- bo nho tam
+        section(root, "Gửi sang máy tính");
+        LinearLayout share = card(root);
+        share.addView(text("Chép chữ trên điện thoại rồi bấm nút dưới để dán được trên máy tính. Với ảnh, tệp hoặc đường link: bấm Chia sẻ trong bất kỳ app nào → chọn \"Gửi sang máy tính\".", 14, MUTED, false));
+        share.addView(button("Gửi chữ đã chép sang máy tính", BLUE_SOFT, BLUE, new View.OnClickListener() {
+            @Override public void onClick(View v) { sendClipToPc(); }
+        }));
 
         // ---- ngan hang
         section(root, "App ngân hàng");
@@ -471,6 +489,22 @@ public class MainActivity extends Activity {
         if (photos) setChip(photoChip, "Đã cho phép", GREEN, GREEN_SOFT);
         else setChip(photoChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
         photoBtn.setVisibility(photos ? View.GONE : View.VISIBLE);
+        boolean files = FilesApi.canReadAll(this);
+        if (files) setChip(fileChip, "Đã cho phép", GREEN, GREEN_SOFT);
+        else setChip(fileChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
+        fileBtn.setVisibility(files ? View.GONE : View.VISIBLE);
+    }
+
+    private void sendClipToPc() {
+        if (Hub.clientCount() == 0) { android.widget.Toast.makeText(this, "Máy tính chưa kết nối.", android.widget.Toast.LENGTH_SHORT).show(); return; }
+        try {
+            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            android.content.ClipData cd = cm.getPrimaryClip();
+            CharSequence t = cd != null && cd.getItemCount() > 0 ? cd.getItemAt(0).coerceToText(this) : null;
+            if (t == null || t.length() == 0) { android.widget.Toast.makeText(this, "Bộ nhớ tạm đang trống.", android.widget.Toast.LENGTH_SHORT).show(); return; }
+            Hub.broadcast(new org.json.JSONObject().put("t", "copied").put("s", t.toString()));
+            android.widget.Toast.makeText(this, "Đã gửi sang máy tính", android.widget.Toast.LENGTH_SHORT).show();
+        } catch (Exception e) { android.widget.Toast.makeText(this, "Lỗi: " + e.getMessage(), android.widget.Toast.LENGTH_SHORT).show(); }
     }
 
     private void openAccessibilitySettings() {

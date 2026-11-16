@@ -29,6 +29,7 @@ public final class Commands {
                 .put("control", Hub.control != null)
                 .put("notif", Hub.notif != null)
                 .put("photos", MediaApi.canReadPhotos(ctx))
+                .put("files", FilesApi.canReadAll(ctx))
                 .put("mirror", Hub.mirror != null && Hub.mirror.isProjecting())
                 .put("screenOn", MirrorService.isScreenOn(ctx))
                 .put("keepAwake", Prefs.getKeepAwake(ctx))
@@ -143,6 +144,11 @@ public final class Commands {
                 else if (t.equals("notifDismiss")) ns.dismiss(key);
                 else if (t.equals("notifReply")) { err = ns.reply(key, m.optString("s")); if (err == null) toast(c, "Đã gửi trả lời"); }
                 else ns.sendAll();
+                if (err != null) toast(c, err);
+                return;
+            }
+            case "media": {
+                String err = MediaCtl.action(ctx, m.optString("a"));
                 if (err != null) toast(c, err);
                 return;
             }

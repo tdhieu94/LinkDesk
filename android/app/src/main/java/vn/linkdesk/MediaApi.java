@@ -32,7 +32,7 @@ public final class MediaApi {
     private static final Map<String, byte[]> iconCache = new HashMap<>();
 
     public static boolean handles(String path) {
-        return path.equals("/photos") || path.equals("/thumb") || path.equals("/photo") || path.equals("/icon") || path.equals("/wallpaper");
+        return path.equals("/photos") || path.equals("/thumb") || path.equals("/photo") || path.equals("/icon") || path.equals("/wallpaper") || path.equals("/mediaart");
     }
 
     public static String photoPermission() {
@@ -48,6 +48,7 @@ public final class MediaApi {
         try {
             if (path.equals("/icon")) { icon(c, q.get("pkg"), out); return; }
             if (path.equals("/wallpaper")) { wallpaper(c, out); return; }
+            if (path.equals("/mediaart")) { byte[] a = MediaCtl.art(); if (a == null) send(out, 404, "text/plain", new byte[0], false); else send(out, 200, "image/jpeg", a, true); return; }
             if (!canReadPhotos(c)) { send(out, 403, "text/plain; charset=utf-8", "Chưa cho phép đọc ảnh".getBytes(StandardCharsets.UTF_8), false); return; }
             if (path.equals("/photos")) list(c, q, out);
             else if (path.equals("/thumb")) thumb(c, parseId(q.get("id")), out);
@@ -207,7 +208,7 @@ public final class MediaApi {
     }
 
     static void send(OutputStream out, int code, String type, byte[] body, boolean cache) throws IOException {
-        String status = code == 200 ? "OK" : code == 403 ? "Forbidden" : code == 404 ? "Not Found" : "Error";
+        String status = code == 200 ? "OK" : code == 403 ? "Forbidden" : code == 404 ? "Not Found" : code == 500 ? "Internal Server Error" : "Error";
         String h = "HTTP/1.1 " + code + " " + status + "\r\nContent-Type: " + type + "\r\nContent-Length: " + body.length
                 + (cache ? "\r\nCache-Control: max-age=86400" : "\r\nCache-Control: no-cache")
                 + "\r\nConnection: close\r\n\r\n";

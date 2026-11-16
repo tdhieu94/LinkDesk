@@ -24,6 +24,7 @@ public final class Hub {
 
     public static void addClient(WsConn c) {
         synchronized (clients) { clients.add(c); }
+        MediaCtl.reset();
         MirrorService m = mirror;
         if (m != null) m.onClientsChanged();
     }

@@ -19,9 +19,22 @@ import org.json.JSONObject;
 /** Doc thong bao de hien tren may tinh (giong Phone Link). */
 public class NotifService extends NotificationListenerService {
 
+    private final android.os.Handler mediaH = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable mediaTick = new Runnable() {
+        @Override public void run() {
+            if (Hub.notif != NotifService.this) return;
+            if (Hub.clientCount() > 0) {
+                new Thread(new Runnable() { @Override public void run() { MediaCtl.poll(NotifService.this); } }).start();
+            }
+            mediaH.postDelayed(this, 1500);
+        }
+    };
+
     @Override
     public void onListenerConnected() {
         Hub.notif = this;
+        mediaH.removeCallbacks(mediaTick);
+        mediaH.postDelayed(mediaTick, 500);
         Commands.broadcastStatus(this);
         sendAll();
     }

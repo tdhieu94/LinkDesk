@@ -62,6 +62,33 @@ namespace LinkDesk
         static readonly HttpClient mediaHttp = new HttpClient(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromMinutes(10) };
 
         /// <summary>GET mot duong dan co PIN (anh, bieu tuong...). Loi -> nem Exception voi noi dung tra ve.</summary>
+        /// <summary>Tai mot duong dan ve tep (khong giu ca tep trong bo nho).</summary>
+        public async Task DownloadTo(string path, string file, IProgress<double> progress, params string[] kv)
+        {
+            var sb = new StringBuilder(Base + path + "?pin=" + Uri.EscapeDataString(Pin));
+            for (int i = 0; i + 1 < kv.Length; i += 2) sb.Append("&" + kv[i] + "=" + Uri.EscapeDataString(kv[i + 1]));
+            using (var r = await upHttp.GetAsync(sb.ToString(), HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false))
+            {
+                if (!r.IsSuccessStatusCode) throw new Exception(await r.Content.ReadAsStringAsync().ConfigureAwait(false));
+                long total = r.Content.Headers.ContentLength ?? -1;
+                string tmp = file + ".part";
+                using (var src = await r.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var dst = File.Create(tmp))
+                {
+                    var buf = new byte[81920];
+                    long done = 0; int n;
+                    while ((n = await src.ReadAsync(buf, 0, buf.Length).ConfigureAwait(false)) > 0)
+                    {
+                        await dst.WriteAsync(buf, 0, n).ConfigureAwait(false);
+                        done += n;
+                        if (total > 0) progress?.Report((double)done / total);
+                    }
+                }
+                if (File.Exists(file)) File.Delete(file);
+                File.Move(tmp, file);
+            }
+        }
+
         public async Task<byte[]> GetBytes(string path, params string[] kv)
         {
             var sb = new StringBuilder(Base + path + "?pin=" + Uri.EscapeDataString(Pin));

@@ -1,12 +1,12 @@
 {
   "android": {
-    "versionCode": 6,
-    "versionName": "0.5.1",
+    "versionCode": 7,
+    "versionName": "0.6.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.apk"
   },
   "windows": {
-    "version": "0.7.1",
+    "version": "0.8.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.exe"
   },
-  "notes": "Ô nhỏ ở góc trái hiện hình nền điện thoại (giống Phone Link) thay vì chạy theo màn hình."
+  "notes": "Điều khiển nhạc đang phát; duyệt và tải tệp từ điện thoại; \"Gửi sang máy tính\" trong menu Chia sẻ (chữ, ảnh, tệp)."
 }

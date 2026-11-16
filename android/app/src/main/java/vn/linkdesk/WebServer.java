@@ -159,6 +159,11 @@ public class WebServer {
                 int r = checkPin(ip, q.get("pin"));
                 if (r != 0) { drain(in, headers); sendText(out, 401, "Sai mã PIN"); return; }
                 handleUpload(in, out, headers, q.get("name"));
+            } else if (method.equals("GET") && FilesApi.handles(path)) {
+                int r = checkPin(ip, q.get("pin"));
+                if (r != 0) { sendText(out, r == 2 ? 429 : 401, "Sai mã PIN"); s.close(); return; }
+                s.setSoTimeout(300_000);
+                FilesApi.serve(ctx, path, q, out);
             } else if (method.equals("GET") && MediaApi.handles(path)) {
                 int r = checkPin(ip, q.get("pin"));
                 if (r != 0) { sendText(out, r == 2 ? 429 : 401, "Sai mã PIN"); s.close(); return; }
