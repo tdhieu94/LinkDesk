@@ -1,12 +1,12 @@
 {
   "android": {
-    "versionCode": 8,
-    "versionName": "0.7.0",
+    "versionCode": 9,
+    "versionName": "0.8.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.apk"
   },
   "windows": {
-    "version": "0.9.0",
+    "version": "0.10.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.exe"
   },
-  "notes": "Tab Tin nhắn: đọc và gửi SMS từ máy tính; tab Cuộc gọi: lịch sử, danh bạ, bàn phím quay số (gọi diễn ra trên điện thoại)."
+  "notes": "Nghe âm thanh điện thoại (nhạc, video) trên máy tính: bấm nút loa ở thanh bên phải. Cần Android 10+ và cho phép \"Âm thanh\" trong app điện thoại."
 }

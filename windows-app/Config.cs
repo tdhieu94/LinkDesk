@@ -26,6 +26,8 @@ namespace LinkDesk
         public bool SidePanel { get; set; } = true;
         public bool AutoUpdate { get; set; } = true;
         public bool ClipSync { get; set; } = true;
+        public bool Audio { get; set; } = false;
+        public int AudioVolume { get; set; } = 100;
         public bool TopMost { get; set; }
         public string Theme { get; set; } = "dark";
         public string SkippedVersion { get; set; } = "";

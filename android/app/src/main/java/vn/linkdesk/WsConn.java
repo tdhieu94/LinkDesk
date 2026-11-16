@@ -23,6 +23,10 @@ public class WsConn {
     private final OutputStream out;
     private final Object writeLock = new Object();
     private volatile boolean open = true;
+    /** May tinh nay muon nghe am thanh dien thoai. */
+    public volatile boolean wantAudio;
+    // Hang doi am thanh nho: neu mang cham thi bo khung cu, giu do tre thap
+    private final java.util.concurrent.ArrayBlockingQueue<byte[]> audioQ = new java.util.concurrent.ArrayBlockingQueue<byte[]>(12);
     // Gui tin nhan chu tren luong rieng (khong bao gio ghi socket tren luong chinh cua Android)
     private final ExecutorService textOut = Executors.newSingleThreadExecutor();
 
@@ -40,6 +44,11 @@ public class WsConn {
         }, "ws-frames");
         sender.setDaemon(true);
         sender.start();
+        Thread audio = new Thread(new Runnable() {
+            @Override public void run() { audioLoop(); }
+        }, "ws-audio");
+        audio.setDaemon(true);
+        audio.start();
         try {
             Commands.sendHello(ctx, this);
             readLoop();
@@ -67,6 +76,22 @@ public class WsConn {
                 if (f == null) continue;
                 seq = (Long) f[1];
                 sendFrame(2, (byte[]) f[0]);
+            }
+        } catch (Exception e) {
+            close();
+        }
+    }
+
+    public void sendAudio(byte[] f) {
+        if (!open) return;
+        while (!audioQ.offer(f)) audioQ.poll();
+    }
+
+    private void audioLoop() {
+        try {
+            while (open) {
+                byte[] f = audioQ.poll(1, java.util.concurrent.TimeUnit.SECONDS);
+                if (f != null) sendFrame(2, f);
             }
         } catch (Exception e) {
             close();

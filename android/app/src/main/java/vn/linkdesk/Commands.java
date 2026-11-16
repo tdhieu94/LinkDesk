@@ -40,7 +40,9 @@ public final class Commands {
                 .put("appVersion", BuildInfo.versionName(ctx))
                 .put("maxSize", Prefs.getMaxSize(ctx))
                 .put("quality", Prefs.getQuality(ctx))
-                .put("fps", Prefs.getFps(ctx));
+                .put("fps", Prefs.getFps(ctx))
+                .put("audio", AudioStreamer.isRunning())
+                .put("audioOk", AudioStreamer.supported() && AudioStreamer.permitted(ctx));
         try {
             Intent b = ctx.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
             if (b != null) {
@@ -188,6 +190,13 @@ public final class Commands {
                 else Prefs.setDark(ctx, m.optBoolean("on"));
                 if (m.optBoolean("on") && Hub.control == null) toast(c, "Cần bật Trợ năng cho LinkDesk để làm tối màn hình.");
                 broadcastStatus(ctx);
+                return;
+            }
+            case "audio": {
+                c.wantAudio = m.optBoolean("on");
+                String err = AudioStreamer.update(ctx);
+                if (err != null) { c.wantAudio = false; toast(c, err); }
+                c.sendText(status(ctx).toString());
                 return;
             }
             case "bankMode":

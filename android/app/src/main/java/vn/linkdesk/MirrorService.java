@@ -48,6 +48,10 @@ public class MirrorService extends Service {
     @Override public IBinder onBind(Intent intent) { return null; }
 
     public boolean isProjecting() { return projection != null; }
+    public MediaProjection projection() { return projection; }
+
+    /** Goi lai startForeground (vd sau khi vua cho phep am thanh) de them loai "micro". */
+    public void refreshForeground() { if (projection != null) updateNotification(true); }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -113,9 +117,11 @@ public class MirrorService extends Service {
         capturer.start();
         updateNotification(true);
         onClientsChanged();
+        if (AudioStreamer.update(this) == null && AudioStreamer.isRunning()) Commands.broadcastStatus(this);
     }
 
     private void stopProjection() {
+        AudioStreamer.stop();
         if (capturer != null) capturer.stop();
         capturer = null;
         MediaProjection p = projection;
@@ -175,7 +181,19 @@ public class MirrorService extends Service {
                 .build();
         try {
             if (sharing) {
-                if (Build.VERSION.SDK_INT >= 34) {
+                int mic = Build.VERSION.SDK_INT >= 30 && AudioStreamer.permitted(this) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE : 0;
+                boolean ok = false;
+                if (mic != 0) {
+                    // Loai "micro" giup Android khong cat tieng khi LinkDesk chay nen
+                    try {
+                        startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION | mic
+                                | (Build.VERSION.SDK_INT >= 34 ? ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE : 0));
+                        ok = true;
+                    } catch (Exception e) { Log.w(TAG, "fgs mic", e); }
+                }
+                if (ok) {
+                    // da xong
+                } else if (Build.VERSION.SDK_INT >= 34) {
                     startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION | ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
                 } else if (Build.VERSION.SDK_INT >= 29) {
                     startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);

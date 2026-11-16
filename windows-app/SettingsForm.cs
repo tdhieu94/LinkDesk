@@ -85,6 +85,20 @@ namespace LinkDesk
             quality.ValueChanged += (s, e) => UpdateQualityLabel();
             quality.Committed += (s, e) => SendVideo();
 
+            // --- am thanh
+            var au = Section(flow, "Âm thanh");
+            var audio = Chk("Nghe âm thanh điện thoại (nhạc, video) trên máy tính", cfg.Audio);
+            audio.CheckedChanged += (s, e) => { if (!loading) main.SetAudio(audio.Checked); };
+            au.Controls.Add(audio);
+            var vol = new Slider { Minimum = 0, Maximum = 100, Step = 5, Value = cfg.AudioVolume };
+            var volLbl = new Label { AutoSize = true, Font = Theme.UI, ForeColor = Theme.Muted, Text = cfg.AudioVolume + "%", Margin = Theme.P(8, 12, 0, 0) };
+            vol.Margin = Theme.P(0, 7, 0, 0);
+            vol.ValueChanged += (s, e) => { volLbl.Text = vol.Value + "%"; main.SetAudioVolume(vol.Value); };
+            au.Controls.Add(Row(RowLabel("Âm lượng trên máy tính"), vol, volLbl));
+            au.Controls.Add(Hint(st.B("audioOk")
+                ? "Cần Android 10 trở lên và đang chia sẻ màn hình. Một số app (ví dụ app ngân hàng, cuộc gọi) không cho thu âm thanh nên sẽ im lặng. Điện thoại vẫn phát tiếng cùng lúc (Android không cho app thường tắt loa khi thu)."
+                : "Trên điện thoại: mở app LinkDesk, mục Quyền, bấm \"Cho phép âm thanh\" (cần Android 10 trở lên)."));
+
             // --- giao dien
             var look = Section(flow, "Giao diện");
             string[] modes = { "dark", "light", "system" };

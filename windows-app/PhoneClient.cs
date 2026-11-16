@@ -22,6 +22,7 @@ namespace LinkDesk
 
         public event Action<Bitmap, int, int> Frame;               // anh, rong hop le, cao hop le
         public event Action<Dictionary<string, object>> Message;
+        public event Action<byte[]> Audio;                          // [3][PCM 16-bit 48 kHz stereo]
         public event Action<ConnState, string> StateChanged;
 
         public long BytesReceived;
@@ -155,6 +156,7 @@ namespace LinkDesk
                 else
                 {
                     var data = ms.ToArray();
+                    if (data.Length > 1 && data[0] == 3) { Audio?.Invoke(data); continue; }
                     if (data.Length < 6 || data[0] != 1) continue;
                     int w = (data[1] << 8) | data[2], h = (data[3] << 8) | data[4];
                     try

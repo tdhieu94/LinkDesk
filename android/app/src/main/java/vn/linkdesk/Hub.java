@@ -31,6 +31,8 @@ public final class Hub {
 
     public static void removeClient(WsConn c) {
         synchronized (clients) { clients.remove(c); }
+        MirrorService mm = mirror;
+        if (c.wantAudio && mm != null) AudioStreamer.update(mm);
         MirrorService m = mirror;
         if (m != null) m.onClientsChanged();
     }

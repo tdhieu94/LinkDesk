@@ -15,6 +15,8 @@ App **không dùng adb**, nên **không cần bật Tùy chọn nhà phát tri�
 
 > **Lưu ý:** bản này mới được build và kiểm tra trên máy chủ (app Windows và giao diện web đã chạy thử với điện thoại giả lập). **Chưa được chạy trên điện thoại thật và Windows thật.** Nếu có lỗi, bạn gửi ảnh chụp hoặc mô tả để sửa.
 
+> **Mới ở bản 0.10.0 (máy tính) + 0.8.0 (điện thoại):** **nghe âm thanh điện thoại trên máy tính** (nhạc, video, game). Bấm nút loa ở thanh dọc bên phải màn hình để bật/tắt; chỉnh âm lượng trong Cài đặt > Âm thanh. Lần đầu: trong app LinkDesk trên điện thoại, mục Quyền, bấm **"Cho phép âm thanh"** (Android sẽ hỏi quyền Micro, nhưng LinkDesk chỉ lấy âm thanh đang phát, không thu micro). Cần Android 10 trở lên và đang chia sẻ màn hình.
+
 > **Mới ở bản 0.9.0 (máy tính) + 0.7.0 (điện thoại):** tab **Tin nhắn** để đọc và gửi SMS ngay trên máy tính, và tab **Cuộc gọi** có lịch sử cuộc gọi, tìm trong danh bạ, bàn phím quay số. Bấm "Gọi" thì điện thoại sẽ gọi đi; bạn nghe và nói bằng điện thoại hoặc tai nghe nối với điện thoại. Lần đầu dùng, mở app LinkDesk trên điện thoại, mục Quyền, bật **Tin nhắn** và **Cuộc gọi**. Trên Android 13 trở lên, nếu Android báo "Cài đặt bị hạn chế", vào Cài đặt > Ứng dụng > LinkDesk, bấm dấu ⋮ góc trên bên phải, chọn **"Cho phép cài đặt hạn chế"**, rồi bật lại quyền.
 
 > **Mới ở bản 0.8.0 (máy tính) + 0.6.0 (điện thoại):** ô **nhạc đang phát** ở cột trái (ảnh bìa, phát/dừng, chuyển bài; cần quyền Thông báo). Tab **Tệp** có thêm "Tệp trong điện thoại" để duyệt và tải tệp về (lần đầu bật "Cho phép truy cập tệp" trong app điện thoại, mục Quyền). Trên điện thoại: bấm **Chia sẻ → "Gửi sang máy tính"** để gửi chữ, link, ảnh hoặc tệp sang máy tính (tệp lưu ở Tải xuống\LinkDesk), và nút "Gửi chữ đã chép sang máy tính" trong app.
@@ -161,12 +163,12 @@ Sau đó **tắt Tùy chọn nhà phát triển như bình thường**, vì quy�
 
 ## 7. Giới hạn hiện tại
 
-- **Chưa có âm thanh** (chỉ có hình). Có thể thêm sau (Android 10+, nhiều app không cho thu tiếng).
+- **Âm thanh** chỉ có trên Android 10 trở lên. Một số app (cuộc gọi, app ngân hàng, vài app nhạc có bản quyền) không cho thu nên sẽ im lặng. Điện thoại vẫn phát tiếng cùng lúc.
 - Hình gửi dạng ảnh JPEG nên **độ trễ và độ nét kém scrcpy** một chút. WiFi yếu thì chọn "Mượt 720p".
 - Nếu **tắt hẳn màn hình** bằng nút nguồn thì hình sẽ dừng (xem mục "Khi màn hình điện thoại tắt").
 - Chỉ dùng được trong **cùng mạng WiFi** (không qua Internet).
 - Kết nối trong mạng nội bộ **không mã hoá**, chỉ được bảo vệ bằng PIN. Chỉ nên dùng ở WiFi nhà hoặc WiFi tin cậy, không dùng WiFi quán cà phê. Nhập sai PIN 5 lần sẽ bị khoá 1 phút. Có thể bấm **Đổi mã PIN** bất cứ lúc nào.
-- Chưa có: gọi điện, xem toàn bộ SMS, đồng bộ ảnh, kéo tệp từ điện thoại về máy tính.
+- Gọi điện: cuộc gọi diễn ra trên điện thoại, máy tính chưa nghe/nói được trong cuộc gọi.
 
 ---
 

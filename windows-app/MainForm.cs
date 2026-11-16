@@ -277,6 +277,7 @@ namespace LinkDesk
             BarSep();
             BarBtn("\uE706", "Bật sáng màn hình", () => Key("wake"));
             BarBtn("\uE72E", "Khoá màn hình", () => Key("lock"));
+            BuildAudioButton();
             BarSep();
             BarBtn("\uE722", "Chụp màn hình (lưu vào Ảnh\\LinkDesk và chép vào clipboard)", Snapshot);
             BarBtn("\uE740", "Toàn màn hình (F11)", ToggleFullscreen);
@@ -429,6 +430,7 @@ namespace LinkDesk
         void Connect(PhoneEntry e)
         {
             client?.Dispose();
+            StopPlayer(); playerFailed = false;
             current = e;
             phoneName = e.Name;
             nameLbl.Text = string.IsNullOrEmpty(e.Name) ? e.Host : e.Name;
@@ -448,6 +450,7 @@ namespace LinkDesk
                 if (client != c || IsDisposed) { bmp.Dispose(); return; }
                 try { BeginInvoke(new Action(() => { if (client == c) screen.SetFrame(bmp, w, h); else bmp.Dispose(); })); } catch { bmp.Dispose(); }
             };
+            c.Audio += d => OnAudio(c, d);
             c.Message += m => { try { BeginInvoke(new Action(() => { if (client == c) OnMessage(m); })); } catch { } };
             c.StateChanged += (st, msg) => { try { BeginInvoke(new Action(() => { if (client == c) OnState(st, msg); })); } catch { } };
             c.Start();
@@ -464,6 +467,7 @@ namespace LinkDesk
                 case ConnState.Connected: connText = "Đã kết nối"; connColor = Theme.Green; tray.Text = "LinkDesk – đã kết nối"; break;
                 case ConnState.Locked: connText = "Bị khoá tạm do nhập sai PIN"; connColor = Theme.Red; break;
                 case ConnState.Disconnected:
+                    StopPlayer();
                     connText = "Mất kết nối – đang thử lại"; connColor = Theme.Red;
                     tray.Text = "LinkDesk – mất kết nối";
                     screen.Banner = null;
@@ -510,6 +514,7 @@ namespace LinkDesk
                     nameLbl.Text = phoneName;
                     modelLbl.Text = phoneModel + (androidVer != "" ? " · Android " + androidVer : "");
                     LoadWallpaper();
+                    if (Cfg.Audio) client?.Send("t", "audio", "on", true);
                     Text = "LinkDesk – " + phoneName;
                     if (current != null && current.Name != phoneName) { current.Name = phoneName; Cfg.Save(); }
                     if (!screen.HasFrame) screen.ClearFrame("Đã kết nối. Đang chờ hình từ điện thoại…");
@@ -871,6 +876,7 @@ namespace LinkDesk
             if (WindowState == FormWindowState.Normal && !fullscreen) { Cfg.WindowWidth = (int)(ClientSize.Width / Theme.Scale); Cfg.WindowHeight = (int)(ClientSize.Height / Theme.Scale); }
             Cfg.Save();
             client?.Dispose();
+            StopPlayer();
             tray.Visible = false;
             tray.Dispose();
             base.OnFormClosing(e);

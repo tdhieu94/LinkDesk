@@ -44,8 +44,8 @@ public class MainActivity extends Activity {
 
     private TextView heroTitle, heroSub, addrText, pinText, statusDot;
     private Button mainBtn;
-    private TextView controlChip, notifChip, photoChip, fileChip, smsChip, callChip;
-    private Button controlBtn, notifBtn, photoBtn, fileBtn, smsBtn, callBtn;
+    private TextView controlChip, notifChip, photoChip, fileChip, smsChip, callChip, audioChip;
+    private Button controlBtn, notifBtn, photoBtn, fileBtn, smsBtn, callBtn, audioBtn;
     private LinearLayout updateCard;
     private TextView updateText;
     private Button updateBtn;
@@ -336,6 +336,12 @@ public class MainActivity extends Activity {
             @Override public void onClick(View v) { askRuntime(new String[]{android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.CALL_PHONE, android.Manifest.permission.READ_CONTACTS, "android.permission.ANSWER_PHONE_CALLS"}); }
         });
         perms.addView(callBtn);
+        perms.addView(divider());
+        audioChip = permRow(perms, "Âm thanh", "Nghe nhạc, video của điện thoại trên máy tính (Android 10+). Android sẽ hỏi quyền Micro, nhưng LinkDesk chỉ lấy âm thanh đang phát, không thu tiếng micro.");
+        audioBtn = button("Cho phép âm thanh", BLUE_SOFT, BLUE, new View.OnClickListener() {
+            @Override public void onClick(View v) { askRuntime(new String[]{android.Manifest.permission.RECORD_AUDIO}); }
+        });
+        perms.addView(audioBtn);
 
         // ---- bo nho tam
         section(root, "Gửi sang máy tính");
@@ -440,7 +446,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onResume() { super.onResume(); h.post(tick); checkUpdate(); }
-    @Override public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); PhoneApi.watch(getApplicationContext()); Commands.broadcastStatus(this); }
+    @Override public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); PhoneApi.watch(getApplicationContext()); MirrorService ms = Hub.mirror; if (ms != null) ms.refreshForeground(); Commands.broadcastStatus(this); }
     @Override protected void onPause() { super.onPause(); h.removeCallbacks(tick); }
 
     private boolean notifGranted() {
@@ -506,6 +512,10 @@ public class MainActivity extends Activity {
         smsBtn.setVisibility(sms ? View.GONE : View.VISIBLE);
         if (calls) setChip(callChip, "Đã cho phép", GREEN, GREEN_SOFT); else setChip(callChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
         callBtn.setVisibility(calls ? View.GONE : View.VISIBLE);
+        boolean audio = AudioStreamer.permitted(this);
+        if (!AudioStreamer.supported()) setChip(audioChip, "Cần Android 10", ORANGE, ORANGE_SOFT);
+        else if (audio) setChip(audioChip, "Đã cho phép", GREEN, GREEN_SOFT); else setChip(audioChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
+        audioBtn.setVisibility(audio || !AudioStreamer.supported() ? View.GONE : View.VISIBLE);
         boolean files = FilesApi.canReadAll(this);
         if (files) setChip(fileChip, "Đã cho phép", GREEN, GREEN_SOFT);
         else setChip(fileChip, "Chưa cấp", ORANGE, ORANGE_SOFT);
