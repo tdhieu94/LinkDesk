@@ -35,7 +35,7 @@ namespace LinkDesk
         readonly Label avatar = new Label { Text = "\uE8EA", Font = Theme.Icons, ForeColor = Theme.AccentText, BackColor = Theme.AccentSoft, TextAlign = ContentAlignment.MiddleCenter };
         readonly FlowLayoutPanel headerRight = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, WrapContents = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = Theme.Panel };
         RoundButton updateBtn, darkBtn, paneBtn;
-        readonly Label toastLabel = new Label { AutoSize = true, Visible = false, BackColor = Color.FromArgb(44, 50, 60), ForeColor = Theme.Text, Font = Theme.UI };
+        readonly Pill toastLabel = new Pill { Visible = false };
         readonly Timer toastTimer = new Timer { Interval = 4000 };
         readonly Timer statsTimer = new Timer { Interval = 1000 };
         readonly Timer updateTimer = new Timer { Interval = 6 * 60 * 60 * 1000 };
@@ -55,11 +55,11 @@ namespace LinkDesk
         Updater.Info pendingUpdate;
         bool screenOn = true, projecting = true;
 
-        static FlowLayoutPanel NewPage() => new FlowLayoutPanel
+        static FlowLayoutPanel NewPage() => Theme.Scroll(new FlowLayoutPanel
         {
             Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true,
             BackColor = Theme.Bg, Padding = Theme.P(16, 4, 8, 16), Visible = false
-        };
+        });
 
         public MainForm(bool minimized)
         {
@@ -67,6 +67,7 @@ namespace LinkDesk
             Text = "LinkDesk";
             Icon = AppIcon;
             BackColor = Theme.Bg;
+            Theme.StyleWindow(this, Theme.Panel);
             ForeColor = Theme.Text;
             Font = Theme.UI;
             AutoScaleMode = AutoScaleMode.None;
@@ -98,7 +99,7 @@ namespace LinkDesk
             screen.BannerClick = () => { if (!screenOn) Key("wake"); };
             screen.Controls.Add(toastLabel);
             screen.Resize += (s, e) => PlaceToast();
-            toastLabel.Padding = Theme.P(14, 8, 14, 8);
+
 
             tray.Icon = AppIcon;
             tray.Text = "LinkDesk";
@@ -265,12 +266,13 @@ namespace LinkDesk
             // --- go chu
             var t = PageCard(typeFlow, "\uE765", "Gõ chữ vào điện thoại");
             t.Controls.Add(Wrap("Bấm vào ô nhập trên điện thoại trước, rồi gõ ở đây. Enter để gửi, Shift+Enter để xuống dòng. Bạn cũng có thể bấm lên màn hình điện thoại rồi gõ thẳng bằng bàn phím."));
-            var tb = new TextBox { Multiline = true, Height = Theme.S(90), Width = Theme.S(320), BackColor = Theme.Panel2, ForeColor = Theme.Text, BorderStyle = BorderStyle.FixedSingle, Font = Theme.UI, Margin = Theme.P(0, 10, 0, 0) };
+            var tbi = new RoundInput(null, true) { Width = Theme.S(320), Margin = Theme.P(0, 10, 0, 0) };
+            var tb = tbi.Box;
             var send = new RoundButton("\uE724", "Gửi sang điện thoại", BtnStyle.Primary) { Margin = Theme.P(0, 8, 0, 0) };
             Action go = () => { if (tb.Text.Length > 0) { client?.Send("t", "text", "s", tb.Text); tb.Text = ""; } };
             tb.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; go(); } };
             send.Click += (s, e) => go();
-            t.Controls.Add(tb);
+            t.Controls.Add(tbi);
             t.Controls.Add(send);
 
             var c = PageCard(typeFlow, "\uE77F", "Bộ nhớ tạm");
@@ -537,7 +539,7 @@ namespace LinkDesk
         {
             foreach (var c in notifFlow.Controls.OfType<Card>().ToList())
             {
-                foreach (var tb in c.Controls.OfType<FlowLayoutPanel>().SelectMany(f => f.Controls.OfType<TextBox>()))
+                foreach (var tb in AllControls(c).OfType<TextBox>())
                     if (tb.Tag is string k) { if (tb.Text != "") drafts[k] = tb.Text; else drafts.Remove(k); }
                 notifFlow.Controls.Remove(c);
                 c.Dispose();
@@ -561,7 +563,7 @@ namespace LinkDesk
                 if (n.S("text") != "")
                 {
                     string text = n.S("text"); if (text.Length > 600) text = text.Substring(0, 600) + "…";
-                    var t = Theme.Lbl(text, Theme.UI, Color.FromArgb(205, 210, 218)); t.MaximumSize = new Size(tw, 0); t.Margin = Theme.P(0, 2, 0, 0); card.Controls.Add(t);
+                    var t = Theme.Lbl(text, Theme.UI, Theme.Text2); t.MaximumSize = new Size(tw, 0); t.Margin = Theme.P(0, 2, 0, 0); card.Controls.Add(t);
                 }
                 var acts = new FlowLayoutPanel { AutoSize = true, Margin = Theme.P(0, 8, 0, 0), WrapContents = false };
                 if (n.B("canOpen")) { var b = new RoundButton("\uE8A7", "Mở", BtnStyle.Soft) { Margin = Theme.P(0, 0, 6, 0) }; b.Click += (s, e) => client?.Send("t", "notifOpen", "key", key); acts.Controls.Add(b); }
@@ -570,8 +572,8 @@ namespace LinkDesk
                 if (n.B("canReply"))
                 {
                     var r = new FlowLayoutPanel { AutoSize = true, Margin = Theme.P(0, 8, 0, 0), WrapContents = false };
-                    var tb = new TextBox { BackColor = Theme.Panel2, ForeColor = Theme.Text, BorderStyle = BorderStyle.FixedSingle, Font = Theme.UI, Tag = key, Width = tw - Theme.S(56), Margin = Theme.P(0, 4, 6, 0) };
-                    Theme.Cue(tb, "Trả lời…");
+                    var tbi = new RoundInput("Trả lời…") { Width = tw - Theme.S(48), Margin = Theme.P(0, 0, 6, 0) };
+                    var tb = tbi.Box; tb.Tag = key;
                     if (drafts.TryGetValue(key, out var dr)) tb.Text = dr;
                     var send = new RoundButton("\uE724", "", BtnStyle.Primary) { Margin = new Padding(0) };
                     Action go = () =>
@@ -582,7 +584,7 @@ namespace LinkDesk
                     };
                     tb.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; go(); } };
                     send.Click += (s, e) => go();
-                    r.Controls.Add(tb); r.Controls.Add(send);
+                    r.Controls.Add(tbi); r.Controls.Add(send);
                     card.Controls.Add(r);
                 }
                 notifFlow.Controls.Add(card);
@@ -738,6 +740,19 @@ namespace LinkDesk
             if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
             Activate();
             if (client == null && Cfg.Last == null) ShowConnect(null);
+        }
+
+        /// <summary>Thoat va mo lai (vd. sau khi doi giao dien sang/toi).</summary>
+        public void Restart()
+        {
+            try
+            {
+                string args = "--restart " + System.Diagnostics.Process.GetCurrentProcess().Id;
+                if (Environment.GetCommandLineArgs().Contains("--portable")) args += " --portable";
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Application.ExecutablePath, args) { UseShellExecute = false });
+            }
+            catch { }
+            ExitApp();
         }
 
         public void ExitApp()

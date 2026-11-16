@@ -26,8 +26,16 @@ namespace LinkDesk
                 return;
             }
             bool minimized = args.Contains("--minimized");
+            int ri = Array.IndexOf(args, "--restart");
+            if (ri >= 0 && ri + 1 < args.Length && int.TryParse(args[ri + 1], out int oldPid))
+            {
+                // Mo lai sau khi doi giao dien: doi ban cu thoat han
+                try { System.Diagnostics.Process.GetProcessById(oldPid).WaitForExit(8000); } catch { }
+            }
+            try { Theme.Apply(Config.Load().Theme); } catch { }
+            Theme.InitProcess();
 
-            if (!args.Contains("--portable") && Installer.OfferInstall()) return;
+            if (!args.Contains("--portable") && ri < 0 && Installer.OfferInstall()) return;
 
             using (var mutex = new Mutex(true, "LinkDesk-Single-7f3c", out bool first))
             {

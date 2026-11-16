@@ -262,7 +262,7 @@ namespace LinkDesk
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
-            g.Clear(Parent?.BackColor ?? Theme.Bg);
+            g.Clear(BackColor);
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var r = new Rectangle(0, 0, Width - 1, Height - 1);
             using (var p = Theme.Round(r, Theme.S(8)))

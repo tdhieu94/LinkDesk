@@ -13,31 +13,26 @@ namespace LinkDesk
         bool loading = true;
 
         public static readonly int[] FpsValues = { 10, 15, 24, 30, 45, 60 };
-        public static readonly (int value, string label)[] SizeValues =
-        {
-            (720, "720p — nhẹ nhất"), (1080, "1080"), (1280, "1280 — cân bằng"), (1600, "1600"), (1920, "1920 — nét"), (4096, "Gốc của điện thoại"),
-        };
+        public static readonly int[] SizeValues = { 720, 1080, 1280, 1600, 1920, 4096 };
 
-        readonly ComboBox fps = Combo();
-        readonly ComboBox size = Combo();
-        readonly TrackBar quality = new TrackBar { Minimum = 30, Maximum = 95, TickFrequency = 5, SmallChange = 5, LargeChange = 10, AutoSize = false };
-        readonly Label qualityLbl = Theme.Lbl("", Theme.UI, Theme.Muted);
+        readonly Segmented fps = new Segmented("10", "15", "24", "30", "45", "60");
+        readonly Segmented size = new Segmented("720", "1080", "1280", "1600", "1920", "Gốc");
+        readonly Slider quality = new Slider { Minimum = 30, Maximum = 95, Step = 5 };
+        readonly Label qualityLbl = Theme.Lbl("", Theme.UIBold, Theme.Text);
 
-        static ComboBox Combo() => new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Theme.Panel2, ForeColor = Theme.Text, FlatStyle = FlatStyle.Flat, Font = Theme.UI, Width = Theme.S(220) };
-
-        static CheckBox Chk(string text, bool value) => new CheckBox { Text = text, Checked = value, AutoSize = true, ForeColor = Theme.Text, Font = Theme.UI, Margin = Theme.P(0, 8, 0, 0) };
+        static Toggle Chk(string text, bool value) { var t = new Toggle(text, value); t.SetWidth(Theme.S(494)); return t; }
 
         static Label Hint(string text)
         {
             var l = Theme.Lbl(text, Theme.Small, Theme.Muted);
-            l.MaximumSize = Theme.Sz(470, 0);
-            l.Margin = Theme.P(22, 0, 0, 4);
+            l.MaximumSize = Theme.Sz(490, 0);
+            l.Margin = Theme.P(0, 2, 0, 4);
             return l;
         }
 
         Card Section(FlowLayoutPanel parent, string title)
         {
-            var c = new Card { MinimumSize = Theme.Sz(520, 0) };
+            var c = new Card { MinimumSize = Theme.Sz(528, 0), MaximumSize = Theme.Sz(528, 0), Padding = Theme.P(18, 16, 16, 16) };
             c.Controls.Add(new Label { Text = title, AutoSize = true, Font = Theme.Title, ForeColor = Theme.Text, Margin = Theme.P(0, 0, 0, 8) });
             parent.Controls.Add(c);
             return c;
@@ -50,7 +45,7 @@ namespace LinkDesk
             return r;
         }
 
-        static Label RowLabel(string t) { var l = Theme.Lbl(t, Theme.UI); l.Width = Theme.S(170); l.AutoSize = false; l.Height = Theme.S(28); l.TextAlign = ContentAlignment.MiddleLeft; return l; }
+        static Label RowLabel(string t) { var l = Theme.Lbl(t, Theme.UI); l.Width = Theme.S(150); l.AutoSize = false; l.Height = Theme.S(42); l.TextAlign = ContentAlignment.MiddleLeft; return l; }
 
         public SettingsForm(MainForm main)
         {
@@ -66,33 +61,39 @@ namespace LinkDesk
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = Theme.Sz(580, 680);
+            ClientSize = Theme.Sz(604, 700);
             ShowInTaskbar = false;
 
-            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = Theme.P(20, 18, 20, 18), BackColor = Theme.Bg };
+            Theme.StyleWindow(this, Theme.Bg);
+            var flow = Theme.Scroll(new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = Theme.P(20, 18, 20, 18), BackColor = Theme.Bg });
             Controls.Add(flow);
 
             // --- hinh anh
             var v = Section(flow, "Hình ảnh");
-            foreach (var f in FpsValues) fps.Items.Add(f + " khung/giây");
-            foreach (var s in SizeValues) size.Items.Add(s.label);
             int curFps = (int)st.L("fps", 30), curSize = (int)st.L("maxSize", 1280), curQ = (int)st.L("quality", 70);
-            fps.SelectedIndex = Math.Max(0, Array.FindIndex(FpsValues, x => x >= curFps));
-            size.SelectedIndex = Math.Max(0, Array.FindIndex(SizeValues, x => x.value >= curSize));
+            fps.Select(Math.Max(0, Array.FindIndex(FpsValues, x => x >= curFps)));
+            size.Select(Math.Max(0, Array.FindIndex(SizeValues, x => x >= curSize)));
             quality.Value = Math.Max(30, Math.Min(95, curQ));
-            quality.Width = Theme.S(220); quality.Height = Theme.S(30);
-            quality.BackColor = Theme.Panel;
             v.Controls.Add(Row(RowLabel("Số khung hình/giây"), fps));
-            v.Controls.Add(Row(RowLabel("Độ nét (cạnh dài)"), size));
+            v.Controls.Add(Row(RowLabel("Độ nét (cạnh dài, px)"), size));
+            qualityLbl.Margin = Theme.P(8, 12, 0, 0); quality.Margin = Theme.P(0, 7, 0, 0);
             v.Controls.Add(Row(RowLabel("Chất lượng ảnh"), quality, qualityLbl));
-            v.Controls.Add(Hint("Khung/giây cao và độ nét cao cần WiFi mạnh và điện thoại khoẻ. Nếu bị giật hoặc trễ, hãy giảm độ nét trước (ví dụ 1080), sau đó mới giảm khung/giây."));
+            v.Controls.Add(Hint("Khung/giây và độ nét cao cần WiFi mạnh. Nếu bị giật hoặc trễ, giảm độ nét trước (ví dụ 1080), sau đó mới giảm khung/giây."));
             UpdateQualityLabel();
-            EventHandler apply = (s, e) => { UpdateQualityLabel(); if (!loading) SendVideo(); };
-            fps.SelectedIndexChanged += apply;
-            size.SelectedIndexChanged += apply;
+            fps.Changed += i => SendVideo();
+            size.Changed += i => SendVideo();
             quality.ValueChanged += (s, e) => UpdateQualityLabel();
-            quality.MouseUp += (s, e) => SendVideo();
-            quality.KeyUp += (s, e) => SendVideo();
+            quality.Committed += (s, e) => SendVideo();
+
+            // --- giao dien
+            var look = Section(flow, "Giao diện");
+            string[] modes = { "dark", "light", "system" };
+            var theme = new Segmented("Tối", "Sáng", "Theo Windows");
+            theme.Select(Math.Max(0, Array.IndexOf(modes, cfg.Theme)));
+            var restart = new RoundButton("\uE72C", "Mở lại để áp dụng", BtnStyle.Primary) { Visible = false, Margin = Theme.P(10, 2, 0, 0) };
+            restart.Click += (s, e) => main.Restart();
+            theme.Changed += i => { if (loading) return; cfg.Theme = modes[i]; cfg.Save(); restart.Visible = true; };
+            look.Controls.Add(Row(RowLabel("Chế độ màu"), theme, restart));
 
             // --- man hinh dien thoai
             var d = Section(flow, "Màn hình điện thoại khi đang kết nối");
@@ -122,8 +123,9 @@ namespace LinkDesk
 
             // --- dien thoai
             var p = Section(flow, "Điện thoại");
+            
             var info = Theme.Lbl(main.PhoneInfo, Theme.UI, Theme.Muted);
-            info.MaximumSize = Theme.Sz(480, 0);
+            info.MaximumSize = Theme.Sz(460, 0);
             p.Controls.Add(info);
             var other = new RoundButton("", "Kết nối điện thoại khác…", BtnStyle.Soft) { Margin = Theme.P(0, 10, 8, 0) };
             other.Click += (s, e) => { Close(); main.ShowConnect(null); };
@@ -154,13 +156,13 @@ namespace LinkDesk
             Shown += (s, e) => loading = false;
         }
 
-        void UpdateQualityLabel() => qualityLbl.Text = "  " + quality.Value + "%";
+        void UpdateQualityLabel() => qualityLbl.Text = quality.Value + "%";
 
         void SendVideo()
         {
             if (loading) return;
-            int f = FpsValues[Math.Max(0, fps.SelectedIndex)];
-            int sz = SizeValues[Math.Max(0, size.SelectedIndex)].value;
+            int f = FpsValues[Math.Max(0, fps.Selected)];
+            int sz = SizeValues[Math.Max(0, size.Selected)];
             main.Send("t", "video", "maxSize", sz, "quality", quality.Value, "fps", f);
         }
     }

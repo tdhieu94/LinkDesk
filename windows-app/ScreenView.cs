@@ -12,6 +12,7 @@ namespace LinkDesk
         Bitmap frame;
         int fw, fh;
         public string Placeholder = "Đang kết nối…";
+        static readonly Font BigIcon = new Font(Theme.Icons.FontFamily, 30f);
         public Action<object> SendCmd;   // gui lenh (Dictionary) toi dien thoai
         string banner;
         public Action BannerClick;       // bam vao khi dang hien thong bao (vd. bat man hinh)
@@ -112,14 +113,16 @@ namespace LinkDesk
             }
             if (banner != null)
             {
-                TextRenderer.DrawText(g, banner, Theme.UI, new Rectangle(r.X + 20, r.Y, r.Width - 40, r.Height), Theme.Text,
+                TextRenderer.DrawText(g, banner, Theme.UI, new Rectangle(r.X + 20, r.Y, r.Width - 40, r.Height), Color.White,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
                 return;
             }
             if (frame == null)
             {
-                TextRenderer.DrawText(g, Placeholder, Font, new Rectangle(r.X + 16, r.Y, r.Width - 32, r.Height), Theme.Muted,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
+                var ir = new Rectangle(r.X, r.Y + r.Height / 2 - Theme.S(70), r.Width, Theme.S(56));
+                TextRenderer.DrawText(g, "\uE8EA", BigIcon, ir, Color.FromArgb(90, 98, 112), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                TextRenderer.DrawText(g, Placeholder, Font, new Rectangle(r.X + 16, r.Y + r.Height / 2 - Theme.S(8), r.Width - 32, Theme.S(80)), Color.FromArgb(160, 167, 178),
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.WordBreak);
             }
         }
 

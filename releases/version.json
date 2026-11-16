@@ -5,8 +5,8 @@
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.apk"
   },
   "windows": {
-    "version": "0.5.0",
+    "version": "0.6.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.exe"
   },
-  "notes": "Mục Ảnh: xem và tải ảnh trong điện thoại. Biểu tượng ứng dụng trong thông báo. Tự gửi chữ vừa chép trên máy tính sang điện thoại. Nút ghim cửa sổ, khung điện thoại mới."
+  "notes": "Giao diện mới: chế độ Sáng/Tối/Theo Windows, thanh tiêu đề cùng màu, công tắc và ô nhập kiểu Windows 11, làm lại cửa sổ Kết nối và Cài đặt."
 }
