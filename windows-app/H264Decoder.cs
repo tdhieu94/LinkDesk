@@ -188,8 +188,8 @@ namespace LinkDesk
         /// <summary>NV12 (BT.601, dai gioi han) -> anh 32-bit.</summary>
         public static unsafe Bitmap ToBitmap(IntPtr src, int stride, int planeH, int w, int h)
         {
-            var bmp = new Bitmap(w, h, PixelFormat.Format32bppRgb);
-            var bd = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.WriteOnly, PixelFormat.Format32bppRgb);
+            var bmp = new Bitmap(w, h, PixelFormat.Format32bppPArgb);
+            var bd = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.WriteOnly, PixelFormat.Format32bppPArgb);
             try
             {
                 byte* y0 = (byte*)src;

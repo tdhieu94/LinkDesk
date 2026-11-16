@@ -190,16 +190,54 @@ namespace LinkDesk
                     if (data.Length > 1 && data[0] == 3) { Audio?.Invoke(data); continue; }
                     if (data.Length > 6 && data[0] == 4) { Video?.Invoke(data); continue; }
                     if (data.Length < 6 || data[0] != 1) continue;
-                    int w = (data[1] << 8) | data[2], h = (data[3] << 8) | data[4];
-                    try
-                    {
-                        // Khong dispose stream: GDI+ can stream ton tai cung anh
-                        var img = new Bitmap(new MemoryStream(data, 5, data.Length - 5));
-                        FramesReceived++;
-                        Frame?.Invoke(img, Math.Min(w, img.Width), Math.Min(h, img.Height));
-                    }
-                    catch { }
+                    PostJpeg(data);
                 }
+            }
+        }
+
+        // ---- giai nen JPEG tren luong rieng, chi giu khung moi nhat (may cham thi bo khung cu)
+        byte[] pendingJpeg;
+        readonly AutoResetEvent jpegReady = new AutoResetEvent(false);
+        Thread jpegThread;
+
+        void PostJpeg(byte[] data)
+        {
+            Interlocked.Exchange(ref pendingJpeg, data);
+            if (jpegThread == null)
+            {
+                jpegThread = new Thread(JpegLoop) { IsBackground = true, Name = "jpeg" };
+                jpegThread.Start();
+            }
+            jpegReady.Set();
+        }
+
+        void JpegLoop()
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                jpegReady.WaitOne(1000);
+                var data = Interlocked.Exchange(ref pendingJpeg, null);
+                if (data == null) continue;
+                int w = (data[1] << 8) | data[2], h = (data[3] << 8) | data[4];
+                try
+                {
+                    Bitmap img;
+                    // Giai nen ngay tai day (GDI+ mac dinh de den luc ve moi giai nen, tren luong giao dien)
+                    // va doi sang 32bppPArgb la dinh dang ve nhanh nhat.
+                    using (var ms = new MemoryStream(data, 5, data.Length - 5))
+                    using (var src = new Bitmap(ms))
+                    {
+                        img = new Bitmap(src.Width, src.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                        using (var g = Graphics.FromImage(img))
+                        {
+                            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                            g.DrawImage(src, new Rectangle(0, 0, src.Width, src.Height), 0, 0, src.Width, src.Height, GraphicsUnit.Pixel);
+                        }
+                    }
+                    FramesReceived++;
+                    Frame?.Invoke(img, Math.Min(w, img.Width), Math.Min(h, img.Height));
+                }
+                catch { }
             }
         }
 

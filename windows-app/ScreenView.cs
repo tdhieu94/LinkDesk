@@ -74,32 +74,54 @@ namespace LinkDesk
             return new Rectangle((Width - dw) / 2, (Height - dh) / 2, dw, dh);
         }
 
+        // Nen tinh (bong, than may, man den) ve san 1 lan theo kich thuoc, moi khung chi ve lai phan hinh
+        Bitmap chrome;
+        Rectangle chromeFor;
+        Size chromeSize;
+
+        void EnsureChrome(Rectangle r, int rad)
+        {
+            if (chrome != null && chromeFor == r && chromeSize == Size) return;
+            chrome?.Dispose();
+            chrome = new Bitmap(Math.Max(1, Width), Math.Max(1, Height), System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            chromeFor = r; chromeSize = Size;
+            using (var g = Graphics.FromImage(chrome))
+            {
+                g.Clear(BackColor);
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                int bz = Theme.S(9);
+                var body = new Rectangle(r.X - bz, r.Y - bz, r.Width + 2 * bz, r.Height + 2 * bz);
+                for (int i = 3; i >= 1; i--)
+                    using (var sp = Theme.Round(new Rectangle(body.X - i * 2, body.Y - i * 2 + 3, body.Width + i * 4, body.Height + i * 4), rad + bz + i * 2))
+                    using (var sb = new SolidBrush(Color.FromArgb(18, 0, 0, 0))) g.FillPath(sb, sp);
+                using (var bp = Theme.Round(body, rad + bz))
+                using (var bb = new LinearGradientBrush(body, Color.FromArgb(44, 48, 56), Color.FromArgb(28, 31, 37), 90f))
+                using (var bpen = new Pen(Color.FromArgb(70, 76, 88), 1))
+                { g.FillPath(bb, bp); g.DrawPath(bpen, bp); }
+                using (var path = Theme.Round(new Rectangle(r.X - 1, r.Y - 1, r.Width + 2, r.Height + 2), rad))
+                    g.FillPath(Brushes.Black, path);
+            }
+        }
+
+        protected override void OnResize(EventArgs e) { chrome?.Dispose(); chrome = null; base.OnResize(e); }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
-            g.Clear(BackColor);
             var r = ImageRect();
-            g.SmoothingMode = SmoothingMode.AntiAlias;
             int rad = Math.Max(Theme.S(10), Math.Min(r.Width, r.Height) / 14);
-            int bz = Theme.S(9);
-            // than may: bong mo + vien
-            var body = new Rectangle(r.X - bz, r.Y - bz, r.Width + 2 * bz, r.Height + 2 * bz);
-            for (int i = 3; i >= 1; i--)
-                using (var sp = Theme.Round(new Rectangle(body.X - i * 2, body.Y - i * 2 + 3, body.Width + i * 4, body.Height + i * 4), rad + bz + i * 2))
-                using (var sb = new SolidBrush(Color.FromArgb(18, 0, 0, 0))) g.FillPath(sb, sp);
-            using (var bp = Theme.Round(body, rad + bz))
-            using (var bb = new LinearGradientBrush(body, Color.FromArgb(44, 48, 56), Color.FromArgb(28, 31, 37), 90f))
-            using (var bpen = new Pen(Color.FromArgb(70, 76, 88), 1))
-            { g.FillPath(bb, bp); g.DrawPath(bpen, bp); }
+            EnsureChrome(r, rad);
+            g.DrawImageUnscaled(chrome, 0, 0);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
             using (var path = Theme.Round(new Rectangle(r.X - 1, r.Y - 1, r.Width + 2, r.Height + 2), rad))
             using (var pen = new Pen(Focused ? Theme.Accent : Color.FromArgb(10, 10, 12), Focused ? 2 : 1))
             {
-                g.FillPath(Brushes.Black, path);
                 if (frame != null)
                 {
                     g.SetClip(path);
-                    g.InterpolationMode = InterpolationMode.HighQualityBilinear;
-                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    // Thu nho nhieu thi can loc ky cho chu de doc; con lai dung loc nhanh cho nhe CPU
+                    g.InterpolationMode = r.Width < fw * 0.67 ? InterpolationMode.HighQualityBilinear : InterpolationMode.Bilinear;
+                    g.PixelOffsetMode = PixelOffsetMode.Half;
                     g.DrawImage(frame, r, new Rectangle(0, 0, fw, fh), GraphicsUnit.Pixel);
                     g.ResetClip();
                 }
@@ -303,7 +325,7 @@ namespace LinkDesk
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { textTimer.Dispose(); wheelTimer.Dispose(); frame?.Dispose(); }
+            if (disposing) { textTimer.Dispose(); wheelTimer.Dispose(); frame?.Dispose(); chrome?.Dispose(); }
             base.Dispose(disposing);
         }
     }

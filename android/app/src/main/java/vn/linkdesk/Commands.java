@@ -207,6 +207,21 @@ public final class Commands {
                 if (ms != null) ms.onClientsChanged();
                 return;
             }
+            case "launch": {
+                String err = MediaApi.launch(ctx, m.optString("pkg"));
+                if (err != null) toast(c, err);
+                else if (Hub.control == null && Build.VERSION.SDK_INT >= 29) toast(c, "Nếu app không mở, hãy bật Trợ năng cho LinkDesk (Android chặn mở app khi chạy nền).");
+                return;
+            }
+            case "view": {
+                c.viewing = m.optBoolean("on", true);
+                if (c.viewing) {
+                    c.resetVideo();
+                    MirrorService ms = Hub.mirror;
+                    if (ms != null) ms.requestFrame();
+                }
+                return;
+            }
             case "keyframe":
                 c.resetVideo();
                 Hub.requestKeyFrame();

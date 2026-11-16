@@ -480,11 +480,17 @@ namespace LinkDesk
             Height = Theme.S(44); Font = Theme.UI; Cursor = Cursors.Hand;
         }
 
-        public void Add(string glyph, string text) { items.Add((glyph, text)); badges.Add(0); Width = TotalWidth(); Invalidate(); }
+        public void Add(string glyph, string text) { items.Add((glyph, text)); badges.Add(0); Width = TotalWidth(); tip.SetToolTip(this, null); Invalidate(); }
+        readonly ToolTip tip = new ToolTip();
+        bool compact;
+        /// <summary>Thieu cho: bo bieu tuong, chi giu chu (vi tri cac tab khong nhay).</summary>
+        public bool Compact { get => compact; set { if (compact != value) { compact = value; Width = TotalWidth(); Invalidate(); } } }
+        public int FullWidth { get { bool c = compact; compact = false; int w = TotalWidth(); compact = c; return w; } }
+        bool ShowText(int i) => true;
         public void SetBadge(int i, int n) { badges[i] = n; Invalidate(); }
         public void Select(int i) { Selected = i; Invalidate(); Changed?.Invoke(i); }
 
-        int ItemWidth(int i) => Theme.S(12) + Theme.S(24) + TextRenderer.MeasureText(items[i].text, Theme.UIBold).Width + Theme.S(12);
+        int ItemWidth(int i) => compact ? Theme.S(12) + TextRenderer.MeasureText(items[i].text, Theme.UIBold).Width + Theme.S(12) : Theme.S(12) + Theme.S(24) + TextRenderer.MeasureText(items[i].text, Theme.UIBold).Width + Theme.S(12);
         int TotalWidth() { int w = 0; for (int i = 0; i < items.Count; i++) w += ItemWidth(i) + Theme.S(4); return w; }
 
         int HitTest(int x)
@@ -494,7 +500,7 @@ namespace LinkDesk
             return -1;
         }
 
-        protected override void OnMouseMove(MouseEventArgs e) { int h = HitTest(e.X); if (h != hover) { hover = h; Invalidate(); } base.OnMouseMove(e); }
+        protected override void OnMouseMove(MouseEventArgs e) { int h = HitTest(e.X); if (h != hover) { hover = h; Invalidate(); tip.SetToolTip(this, h >= 0 && !ShowText(h) ? items[h].text : null); } base.OnMouseMove(e); }
         protected override void OnMouseLeave(EventArgs e) { hover = -1; Invalidate(); base.OnMouseLeave(e); }
         protected override void OnMouseClick(MouseEventArgs e) { int h = HitTest(e.X); if (h >= 0) Select(h); base.OnMouseClick(e); }
 
@@ -511,9 +517,9 @@ namespace LinkDesk
                 bool sel = i == Selected;
                 if (hover == i && !sel) using (var p = Theme.Round(r, Theme.S(8))) using (var b = new SolidBrush(Theme.Hover)) g.FillPath(b, p);
                 var fg = sel ? Theme.Text : Theme.Text2;
-                var gr = new Rectangle(x + Theme.S(12), r.Y, Theme.S(20), r.Height);
-                TextRenderer.DrawText(g, items[i].glyph, Theme.IconsSmall, gr, sel ? Theme.AccentText : Theme.Text2, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
-                TextRenderer.DrawText(g, items[i].text, sel ? Theme.UIBold : Theme.UI, new Rectangle(gr.Right + Theme.S(6), r.Y, w, r.Height), fg, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+                var gr = compact ? new Rectangle(x + Theme.S(6), r.Y, 0, r.Height) : new Rectangle(x + Theme.S(12), r.Y, Theme.S(20), r.Height);
+                if (!compact) TextRenderer.DrawText(g, items[i].glyph, Theme.IconsSmall, gr, sel ? Theme.AccentText : Theme.Text2, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+                if (ShowText(i)) TextRenderer.DrawText(g, items[i].text, sel ? Theme.UIBold : Theme.UI, new Rectangle(gr.Right + Theme.S(6), r.Y, w, r.Height), fg, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
                 if (badges[i] > 0)
                 {
                     string bs = badges[i] > 99 ? "99+" : badges[i].ToString();

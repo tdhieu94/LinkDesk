@@ -15,6 +15,8 @@ App **không dùng adb**, nên **không cần bật Tùy chọn nhà phát tri�
 
 > **Lưu ý:** bản này mới được build và kiểm tra trên máy chủ (app Windows và giao diện web đã chạy thử với điện thoại giả lập). **Chưa được chạy trên điện thoại thật và Windows thật.** Nếu có lỗi, bạn gửi ảnh chụp hoặc mô tả để sửa.
 
+> **Mới ở bản 0.13.0 (máy tính) + 0.11.0 (điện thoại):** tab **Ứng dụng**: xem các app trên điện thoại, gõ để tìm (không cần dấu), bấm là app mở trên điện thoại (nên bật Trợ năng để Android cho mở khi LinkDesk chạy nền). **Tối ưu**: khi bạn thu nhỏ cửa sổ hoặc chuyển sang tab khác, điện thoại ngừng gửi hình nên đỡ tốn pin và WiFi; máy tính giải nén hình ở luồng riêng và vẽ nhẹ hơn nên mượt hơn. Thanh tab tự gọn lại khi cửa sổ hẹp.
+
 > **Mới ở bản 0.12.0 (máy tính) + 0.10.0 (điện thoại):** **video H.264 (thử nghiệm)**: hình mượt hơn và tốn mạng ít hơn so với gửi từng ảnh JPEG, giống cách scrcpy làm. Bật trong Cài đặt > Hình ảnh > "Video H.264". Máy tính dùng bộ giải mã có sẵn của Windows; nếu không giải mã được, app tự quay về chế độ ảnh. Nếu hình lỗi màu, nhoè hoặc đứng, hãy tắt mục này.
 
 > **Mới ở bản 0.11.0 (máy tính) + 0.9.0 (điện thoại):** **mã hoá kết nối**. Hình ảnh, tin nhắn, tệp, âm thanh và mã PIN giữa máy tính và điện thoại giờ được mã hoá (TLS), người khác cùng WiFi không xem trộm được. Không cần làm gì thêm: cập nhật cả hai app là tự bật. Trong app điện thoại có dòng **"Mã bảo mật: XXXX XXXX"**, trên máy tính xem ở Cài đặt > Điện thoại; hai mã phải giống nhau. Nếu máy tính báo "Mã bảo mật thay đổi" mà bạn không cài lại app điện thoại, đừng nhập PIN và hãy kiểm tra WiFi.

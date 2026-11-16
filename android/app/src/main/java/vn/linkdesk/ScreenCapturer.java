@@ -162,7 +162,7 @@ public class ScreenCapturer implements ImageReader.OnImageAvailableListener {
         if (reader == null) return;
         // Khong ai xem: chi cap nhat anh dem 2 lan/giay (khong nen JPEG) de tiet kiem pin,
         // nhung van co san khung hinh moi nhat khi may tinh vua ket noi.
-        boolean watching = Hub.clientCount() > 0;
+        boolean watching = Hub.viewerCount() > 0;
         long now = SystemClock.uptimeMillis();
         long minGap = watching ? 1000L / fps : 500L;
         if (!force && now - lastFrameAt < minGap) {

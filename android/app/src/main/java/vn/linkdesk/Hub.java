@@ -43,6 +43,13 @@ public final class Hub {
         synchronized (clients) { return clients.size(); }
     }
 
+    /** So may dang thuc su nhin man hinh (khong thu nho, dang o tab Man hinh). */
+    public static int viewerCount() {
+        int n = 0;
+        for (WsConn c : snapshotClients()) if (c.viewing) n++;
+        return n;
+    }
+
     public static List<WsConn> snapshotClients() {
         synchronized (clients) { return new ArrayList<>(clients); }
     }

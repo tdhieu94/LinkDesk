@@ -1,12 +1,12 @@
 {
   "android": {
-    "versionCode": 11,
-    "versionName": "0.10.0",
+    "versionCode": 12,
+    "versionName": "0.11.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.apk"
   },
   "windows": {
-    "version": "0.12.0",
+    "version": "0.13.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.exe"
   },
-  "notes": "Video H.264 (thử nghiệm) cho hình mượt hơn: bật trong Cài đặt > Hình ảnh. Cần cập nhật cả hai app."
+  "notes": "Tab Ứng dụng: mở app điện thoại từ máy tính. Đỡ tốn pin và WiFi: điện thoại ngừng gửi hình khi bạn không xem màn hình. Hình mượt hơn."
 }

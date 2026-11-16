@@ -191,6 +191,7 @@ namespace LinkDesk
                 using (var ms = new MemoryStream(b)) img = new Bitmap(Image.FromStream(ms));
                 appIcons[pkg] = img;
                 foreach (var pb in AllControls(notifFlow).OfType<PictureBox>()) if (pb.Tag as string == pkg) pb.Image = img;
+                OnAppIcon(pkg, img);
             }
             catch { appIcons[pkg] = null; }
         }

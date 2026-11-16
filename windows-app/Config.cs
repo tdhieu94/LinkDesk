@@ -82,6 +82,7 @@ namespace LinkDesk
         static readonly JavaScriptSerializer ser = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
         public static string Ser(object o) => ser.Serialize(o);
         public static Dictionary<string, object> Parse(string s) => ser.DeserializeObject(s) as Dictionary<string, object>;
+        public static object[] ParseArray(string s) => new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = int.MaxValue }.DeserializeObject(s) as object[] ?? new object[0];
         public static string S(this Dictionary<string, object> d, string k) => d != null && d.TryGetValue(k, out var v) && v != null ? Convert.ToString(v) : "";
         public static bool B(this Dictionary<string, object> d, string k) => d != null && d.TryGetValue(k, out var v) && v is bool b && b;
         public static long L(this Dictionary<string, object> d, string k, long def = 0)

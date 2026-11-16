@@ -27,6 +27,8 @@ public class WsConn {
     public volatile boolean wantAudio;
     /** May tinh nay giai ma duoc H.264. */
     public volatile boolean wantH264;
+    /** May tinh dang hien man hinh; false = khong gui hinh de tiet kiem pin va mang. */
+    public volatile boolean viewing = true;
     private final java.util.ArrayDeque<byte[]> videoQ = new java.util.ArrayDeque<byte[]>();
     private int videoBytes;
     private boolean needKey = true;
@@ -85,7 +87,7 @@ public class WsConn {
                 Object[] f = Hub.waitFrame(seq, 1000);
                 if (f == null) continue;
                 seq = (Long) f[1];
-                sendFrame(2, (byte[]) f[0]);
+                if (viewing && !wantH264Active()) sendFrame(2, (byte[]) f[0]);
             }
         } catch (Exception e) {
             close();
@@ -96,6 +98,7 @@ public class WsConn {
     public void sendVideo(byte[] p, boolean key) {
         if (!open) return;
         synchronized (videoQ) {
+            if (!viewing) { needKey = true; return; }
             if (needKey && !key) { Hub.requestKeyFrame(); return; }
             if (videoBytes + p.length > 4 * 1024 * 1024 || videoQ.size() > 90) {
                 videoQ.clear(); videoBytes = 0;
@@ -105,6 +108,11 @@ public class WsConn {
             videoQ.add(p); videoBytes += p.length;
             videoQ.notifyAll();
         }
+    }
+
+    private boolean wantH264Active() {
+        MirrorService m = Hub.mirror;
+        return wantH264 && m != null && m.isH264();
     }
 
     public void resetVideo() {

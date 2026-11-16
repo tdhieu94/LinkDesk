@@ -26,6 +26,7 @@ namespace LinkDesk
         void RequestCodec()
         {
             needKey = true;
+            if (!PhoneAtLeast(0, 10)) return;
             client?.Send("t", "codec", "h264", Cfg.H264 && !h264Failed);
         }
 
@@ -89,6 +90,45 @@ namespace LinkDesk
             decoder = null;
             c.Send("t", "codec", "h264", false);
             try { BeginInvoke(new Action(() => Toast("Không giải mã được video H.264 trên máy này (" + why + "). Đã chuyển về chế độ ảnh JPEG."))); } catch { }
+        }
+    }
+}
+
+namespace LinkDesk
+{
+    // Chi xin hinh khi dang nhin thay man hinh dien thoai (tiet kiem pin dien thoai va WiFi).
+    public partial class MainForm
+    {
+        bool? lastView;
+        System.Windows.Forms.Timer viewTimer;
+
+        bool IsViewing => Visible && WindowState != System.Windows.Forms.FormWindowState.Minimized && center.Visible;
+
+        void UpdateViewing(bool force = false)
+        {
+            bool v = IsViewing;
+            if (!force && lastView == v) return;
+            lastView = v;
+            if (v) needKey = true;
+            // App dien thoai cu chua biet lenh nay (se bao "lenh khong ho tro")
+            if (PhoneAtLeast(0, 11)) client?.Send("t", "view", "on", v);
+        }
+
+        bool PhoneAtLeast(int major, int minor)
+        {
+            Version v;
+            return Version.TryParse(LastStatus.S("appVersion"), out v) && (v.Major > major || (v.Major == major && v.Minor >= minor));
+        }
+
+        void InitViewTracking()
+        {
+            Resize += (s, e) => UpdateViewing();
+            VisibleChanged += (s, e) => UpdateViewing();
+            center.VisibleChanged += (s, e) => UpdateViewing();
+            // Phong khi bo sot su kien
+            viewTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+            viewTimer.Tick += (s, e) => UpdateViewing();
+            viewTimer.Start();
         }
     }
 }

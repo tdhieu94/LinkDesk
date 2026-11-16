@@ -32,7 +32,7 @@ public final class MediaApi {
     private static final Map<String, byte[]> iconCache = new HashMap<>();
 
     public static boolean handles(String path) {
-        return path.equals("/photos") || path.equals("/thumb") || path.equals("/photo") || path.equals("/icon") || path.equals("/wallpaper") || path.equals("/mediaart");
+        return path.equals("/photos") || path.equals("/thumb") || path.equals("/photo") || path.equals("/icon") || path.equals("/wallpaper") || path.equals("/mediaart") || path.equals("/apps");
     }
 
     public static String photoPermission() {
@@ -47,6 +47,7 @@ public final class MediaApi {
     public static void serve(Context c, String path, Map<String, String> q, OutputStream out) throws IOException {
         try {
             if (path.equals("/icon")) { icon(c, q.get("pkg"), out); return; }
+            if (path.equals("/apps")) { apps(c, out); return; }
             if (path.equals("/wallpaper")) { wallpaper(c, out); return; }
             if (path.equals("/mediaart")) { byte[] a = MediaCtl.art(); if (a == null) send(out, 404, "text/plain", new byte[0], false); else send(out, 200, "image/jpeg", a, true); return; }
             if (!canReadPhotos(c)) { send(out, 403, "text/plain; charset=utf-8", "Chưa cho phép đọc ảnh".getBytes(StandardCharsets.UTF_8), false); return; }
@@ -127,6 +128,42 @@ public final class MediaApi {
         int n;
         try { while ((n = in.read(buf)) > 0) out.write(buf, 0, n); } finally { in.close(); }
         out.flush();
+    }
+
+    /** Cac app co bieu tuong tren man hinh chinh: [{pkg, name}], xep theo ten. */
+    private static void apps(Context c, OutputStream out) throws Exception {
+        android.content.pm.PackageManager pm = c.getPackageManager();
+        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER);
+        java.util.List<android.content.pm.ResolveInfo> l = pm.queryIntentActivities(i, 0);
+        java.util.TreeMap<String, String> sorted = new java.util.TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+        java.util.HashSet<String> seen = new java.util.HashSet<String>();
+        for (android.content.pm.ResolveInfo r : l) {
+            String pkg = r.activityInfo.packageName;
+            if (pkg.equals(c.getPackageName()) || !seen.add(pkg)) continue;
+            String name = String.valueOf(r.loadLabel(pm));
+            sorted.put(name + "\u0000" + pkg, pkg);
+        }
+        org.json.JSONArray a = new org.json.JSONArray();
+        for (java.util.Map.Entry<String, String> e : sorted.entrySet()) {
+            String k = e.getKey();
+            a.put(new org.json.JSONObject().put("pkg", e.getValue()).put("name", k.substring(0, k.indexOf('\u0000'))));
+        }
+        send(out, 200, "application/json; charset=utf-8", a.toString().getBytes(StandardCharsets.UTF_8), false);
+    }
+
+    /** Mo app tren dien thoai. Tra ve loi hoac null. */
+    public static String launch(Context c, String pkg) {
+        try {
+            android.content.Intent i = c.getPackageManager().getLaunchIntentForPackage(pkg);
+            if (i == null) return "Không mở được ứng dụng này.";
+            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+            // Mo tu dich vu Tro nang de Android cho phep mo app khi LinkDesk chay nen
+            Context starter = Hub.control != null ? Hub.control : c;
+            starter.startActivity(i);
+            return null;
+        } catch (Exception e) {
+            return "Không mở được: " + e.getMessage();
+        }
     }
 
     private static void icon(Context c, String pkg, OutputStream out) throws IOException {
