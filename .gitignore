@@ -1,0 +1,10 @@
+build/out/
+build/*.jar
+build/*.keystore
+*.keystore
+windows-app/bin/
+windows-app/obj/
+.gradle/
+android/app/build/
+local.properties
+dist/

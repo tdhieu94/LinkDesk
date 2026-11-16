@@ -1,0 +1,27 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "vn.linkdesk"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "vn.linkdesk"
+        minSdk 26
+        targetSdk 34
+        versionCode 4
+        versionName "0.4.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}

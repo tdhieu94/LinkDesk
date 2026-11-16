@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LinkDesk</string>
+    <string name="control_label">LinkDesk – điều khiển từ máy tính</string>
+    <string name="notif_label">LinkDesk – thông báo</string>
+    <string name="control_desc">Cho phép máy tính (qua LinkDesk) chạm, vuốt, gõ chữ và bấm Back/Home trên điện thoại này. Chỉ hoạt động khi bạn đang chia sẻ màn hình bằng LinkDesk. Tắt dịch vụ này trước khi dùng app ngân hàng.</string>
+</resources>
