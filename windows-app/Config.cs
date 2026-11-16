@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,6 +16,8 @@ namespace LinkDesk
         public string Pin { get; set; } = "";
         /// <summary>Dau van tay SHA-256 chung chi TLS cua dien thoai (rong = chua ghep doi ma hoa).</summary>
         public string CertSha { get; set; } = "";
+        /// <summary>Sao luu anh chup tu thoi diem nay (ms).</summary>
+        public long BackupSince { get; set; }
     }
 
     public class Config
@@ -33,6 +35,8 @@ namespace LinkDesk
         /// <summary>Video H.264 (thu nghiem).</summary>
         public bool H264 { get; set; } = false;
         public bool TopMost { get; set; }
+        public bool PhotoBackup { get; set; }
+        public string BackupDir { get; set; } = "";
         /// <summary>Ung dung bi tat thong bao: pkg -> ten.</summary>
         public Dictionary<string, string> MutedApps { get; set; } = new Dictionary<string, string>();
         /// <summary>Phim tat toan cuc hien/an LinkDesk, "" = tat.</summary>

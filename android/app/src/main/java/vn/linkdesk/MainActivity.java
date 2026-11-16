@@ -448,7 +448,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onResume() { super.onResume(); h.post(tick); checkUpdate(); }
-    @Override public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); PhoneApi.watch(getApplicationContext()); PhoneApi.watchCalls(getApplicationContext()); MirrorService ms = Hub.mirror; if (ms != null) ms.refreshForeground(); Commands.broadcastStatus(this); }
+    @Override public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); PhoneApi.watch(getApplicationContext()); PhoneApi.watchCalls(getApplicationContext()); MediaApi.watchPhotos(getApplicationContext()); MirrorService ms = Hub.mirror; if (ms != null) ms.refreshForeground(); Commands.broadcastStatus(this); }
     @Override protected void onPause() { super.onPause(); h.removeCallbacks(tick); }
 
     private boolean notifGranted() {

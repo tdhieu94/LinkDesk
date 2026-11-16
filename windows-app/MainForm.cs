@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -418,6 +418,7 @@ namespace LinkDesk
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            InitReconnectHooks();
             ApplyTopMost();
             var last = Cfg.Last;
             if (last != null) Connect(last);
@@ -465,8 +466,9 @@ namespace LinkDesk
             photoInfo.Text = "";
             screen.Banner = null;
             screen.ClearFrame("Đang kết nối tới " + nameLbl.Text + "…");
-            var c = new PhoneClient(e.Host, e.Port, e.Pin, e.CertSha);
+            var c = new PhoneClient(e.Host, e.Port, e.Pin, e.CertSha) { PhoneId = e.Id ?? "" };
             client = c;
+            c.HostChanged += h => { try { BeginInvoke(new Action(() => { if (client != c) return; e.Host = h; Cfg.LastHost = h; Cfg.Save(); Toast("Điện thoại đã đổi địa chỉ IP, LinkDesk đã tự tìm lại: " + h); })); } catch { } };
             c.Frame += (bmp, w, h) =>
             {
                 if (client != c || IsDisposed) { bmp.Dispose(); return; }
@@ -555,6 +557,8 @@ namespace LinkDesk
                     lastView = null; UpdateViewing(true);
                     Text = "LinkDesk – " + phoneName;
                     if (current != null && current.Name != phoneName) { current.Name = phoneName; Cfg.Save(); }
+                    if (current != null && m.S("id") != "" && current.Id != m.S("id")) { current.Id = m.S("id"); if (client != null) client.PhoneId = current.Id; Cfg.Save(); }
+                    StartBackupSoon();
                     if (!screen.HasFrame) screen.ClearFrame("Đã kết nối. Đang chờ hình từ điện thoại…");
                     OnStatus(m);
                     break;
@@ -600,6 +604,7 @@ namespace LinkDesk
                     else callPopup?.Hide();
                     if (callsLoaded) LoadCalls();
                     break;
+                case "photosChanged": OnPhotosChanged(); break;
                 case "callsChanged": if (callsLoaded) LoadCalls(); break;
             }
         }
@@ -638,6 +643,7 @@ namespace LinkDesk
         }
 
         long lastBytes;
+        public long RxPerSec; public int FpsNow;
         int statusTick;
         void UpdateStats()
         {
@@ -659,6 +665,7 @@ namespace LinkDesk
                 if (!c.Secure) chips.Add(("\uE7BA", "Chưa mã hoá", Theme.Orange));
                 if (LastStatus.Has("control") && !LastStatus.B("control")) chips.Add(("\uE7B3", "Chỉ xem", Theme.Orange));
                 subLbl.Set(chips.ToArray());
+                RxPerSec = b - lastBytes; FpsNow = f;
                 lastBytes = b;
                 if (++statusTick % 15 == 0) c.Send("t", "status");
             }

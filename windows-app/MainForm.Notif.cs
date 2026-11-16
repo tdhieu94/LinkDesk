@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -123,6 +123,7 @@ namespace LinkDesk
             if (Cfg.Phones.Count > 0) items.Add(new ToolStripSeparator());
             if (current != null) items.Add("Kết nối lại", null, (s, e) => Connect(current));
             items.Add("Thêm / kết nối điện thoại khác…", null, (s, e) => { ShowFromTray(); ShowConnect(null); });
+            items.Add("Chẩn đoán kết nối…", null, (s, e) => { ShowFromTray(); ShowDiagnostics(); });
             if (current != null && Cfg.Phones.Count > 1)
             {
                 var cp = current;

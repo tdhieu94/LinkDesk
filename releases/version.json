@@ -1,12 +1,12 @@
 {
   "android": {
-    "versionCode": 14,
-    "versionName": "0.13.0",
+    "versionCode": 15,
+    "versionName": "0.14.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.apk"
   },
   "windows": {
-    "version": "0.16.0",
+    "version": "0.17.0",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.exe"
   },
-  "notes": "Lịch sử thông báo có tìm kiếm, ẩn thông báo theo app, phím tắt Ctrl+Alt+P để hiện/ẩn LinkDesk, chuyển nhanh giữa các điện thoại."
+  "notes": "Tự sao lưu ảnh mới về máy tính, kết nối lại nhanh hơn (tự tìm lại điện thoại khi đổi IP), trang Chẩn đoán kết nối."
 }

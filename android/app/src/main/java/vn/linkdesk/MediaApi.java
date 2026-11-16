@@ -151,6 +151,25 @@ public final class MediaApi {
         send(out, 200, "application/json; charset=utf-8", a.toString().getBytes(StandardCharsets.UTF_8), false);
     }
 
+    // ---- bao may tinh khi co anh moi (de tu sao luu)
+    private static android.database.ContentObserver photoObserver;
+
+    public static void watchPhotos(Context c) {
+        if (photoObserver != null) return;
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        final Runnable fire = new Runnable() {
+            @Override public void run() {
+                if (Hub.clientCount() == 0) return;
+                try { Hub.broadcast(new JSONObject().put("t", "photosChanged")); } catch (Exception ignored) {}
+            }
+        };
+        photoObserver = new android.database.ContentObserver(h) {
+            @Override public void onChange(boolean self) { h.removeCallbacks(fire); h.postDelayed(fire, 4000); }
+        };
+        try { c.getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, photoObserver); }
+        catch (Exception e) { photoObserver = null; }
+    }
+
     /** Mo app tren dien thoai. Tra ve loi hoac null. */
     public static String launch(Context c, String pkg) {
         try {

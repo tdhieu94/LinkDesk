@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -139,6 +139,29 @@ namespace LinkDesk
             clip.CheckedChanged += (s, e) => { cfg.ClipSync = clip.Checked; cfg.Save(); };
             a.Controls.Add(startup); a.Controls.Add(tray); a.Controls.Add(notif); a.Controls.Add(clip); a.Controls.Add(upd);
 
+            // --- sao luu anh
+            var bk = Section(flow, "Sao lưu ảnh");
+            var bkOn = Chk("Tự chép ảnh mới trên điện thoại về máy tính", cfg.PhotoBackup);
+            bk.Controls.Add(bkOn);
+            bk.Controls.Add(Hint("Khi đang kết nối, ảnh mới chụp hoặc tải về điện thoại được chép vào thư mục dưới đây, chia theo tháng. Lần đầu bật sẽ lấy cả ảnh 7 ngày gần nhất. Ảnh trên điện thoại không bị xoá."));
+            var bkDir = Theme.Lbl(main.BackupRoot, Theme.UI, Theme.Text2);
+            bkDir.MaximumSize = Theme.Sz(490, 0); bkDir.Margin = Theme.P(0, 6, 0, 4);
+            bk.Controls.Add(bkDir);
+            var bkInfo = Hint(main.BackupInfo);
+            var change = new RoundButton("\uE8DA", "Đổi thư mục…", BtnStyle.Soft) { Margin = Theme.P(0, 4, 8, 0) };
+            change.Click += (s, e) =>
+            {
+                using (var d = new FolderBrowserDialog { Description = "Chọn thư mục để sao lưu ảnh từ điện thoại", SelectedPath = main.BackupRoot })
+                    if (d.ShowDialog(this) == DialogResult.OK) { cfg.BackupDir = d.SelectedPath; cfg.Save(); bkDir.Text = main.BackupRoot; }
+            };
+            var openDir = new RoundButton("\uE838", "Mở thư mục", BtnStyle.Ghost) { Margin = Theme.P(0, 4, 8, 0) };
+            openDir.Click += (s, e) => { try { System.IO.Directory.CreateDirectory(main.BackupRoot); System.Diagnostics.Process.Start("explorer.exe", "\"" + main.BackupRoot + "\""); } catch { } };
+            var now = new RoundButton("\uE895", "Sao lưu ngay", BtnStyle.Ghost) { Margin = Theme.P(0, 4, 0, 0) };
+            now.Click += (s, e) => { if (!cfg.PhotoBackup) bkOn.Checked = true; main.StartBackupSoon(10); bkInfo.Text = "Đang sao lưu…"; };
+            bkOn.CheckedChanged += (s, e) => { cfg.PhotoBackup = bkOn.Checked; cfg.Save(); if (bkOn.Checked) main.StartBackupSoon(500); };
+            bk.Controls.Add(Row(change, openDir, now));
+            bk.Controls.Add(bkInfo);
+
             // --- thong bao
             var ns = Section(flow, "Thông báo và phím tắt");
             ns.Controls.Add(Hint("Phím tắt để hiện/ẩn LinkDesk từ bất cứ đâu:"));
@@ -179,6 +202,9 @@ namespace LinkDesk
             var bank = new RoundButton("", "Chế độ ngân hàng (tắt hết)", BtnStyle.Danger) { Margin = Theme.P(0, 10, 0, 0) };
             bank.Click += (s, e) => { Close(); main.BankMode(); };
             p.Controls.Add(Row(other, bank));
+            var diag = new RoundButton("\uE9D9", "Chẩn đoán kết nối…", BtnStyle.Soft) { Margin = Theme.P(0, 8, 0, 0) };
+            diag.Click += (s, e) => { Close(); main.ShowDiagnostics(); };
+            p.Controls.Add(diag);
 
             // --- ve
             var ab = Section(flow, "LinkDesk " + Installer.Version);

@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -16,7 +17,10 @@ namespace LinkDesk
     /// <summary>Ket noi toi app LinkDesk tren dien thoai (WebSocket + HTTP).</summary>
     public sealed class PhoneClient : IDisposable
     {
-        public readonly string Host;
+        /// <summary>Dia chi hien tai (co the doi neu dien thoai doi IP, tim lai qua mang LAN).</summary>
+        public volatile string Host;
+        /// <summary>Ma dinh danh dien thoai (de tim lai khi doi IP).</summary>
+        public string PhoneId = "";
         public readonly int Port;
         public readonly string Pin;
         public readonly string CertSha;
@@ -29,6 +33,18 @@ namespace LinkDesk
         public event Action<byte[]> Audio;
         public event Action<byte[]> Video;                          // [4][co][rong 2][cao 2][H.264 Annex-B]                          // [3][PCM 16-bit 48 kHz stereo]
         public event Action<ConnState, string> StateChanged;
+        public event Action<string> HostChanged;
+
+        // ---- so lieu cho trang Chan doan
+        public int Reconnects;
+        public string LastError = "";
+        public int LatencyMs = -1;
+        public DateTime ConnectedSince;
+        long lastRx;
+        TaskCompletionSource<bool> kick = new TaskCompletionSource<bool>();
+
+        /// <summary>Thu ket noi lai ngay (vd. vua co mang lai, vua thuc day sau khi ngu).</summary>
+        public void Kick() { kick.TrySetResult(true); }
 
         public long BytesReceived;
         public int FramesReceived;
@@ -158,16 +174,52 @@ namespace LinkDesk
                         ws = new WsClient();
                         await ws.ConnectAsync(Host, Secure ? Port + Tls.PortOffset : Port, Secure, "/ws?pin=" + Uri.EscapeDataString(Pin), cts.Token).ConfigureAwait(false);
                         retry = 0;
+                        ConnectedSince = DateTime.Now;
+                        lastRx = Environment.TickCount;
                         StateChanged?.Invoke(ConnState.Connected, null);
+                        var watch = Watchdog(ws);
                         await ReceiveLoop(ws).ConfigureAwait(false);
+                        LastError = "Mất kết nối lúc " + DateTime.Now.ToString("HH:mm:ss");
                     }
-                    catch (Exception) { }
+                    catch (Exception ex) { LastError = DateTime.Now.ToString("HH:mm:ss") + " " + ex.Message; }
                     finally { try { ws?.Dispose(); } catch { } ws = null; }
                 }
                 if (cts.IsCancellationRequested) break;
+                if (st != ConnState.Connected && !string.IsNullOrEmpty(msg)) LastError = DateTime.Now.ToString("HH:mm:ss") + " " + msg;
                 StateChanged?.Invoke(st == ConnState.Locked ? ConnState.Locked : ConnState.Disconnected, msg);
+                Reconnects++;
                 retry = Math.Min(retry + 1, 8);
-                try { await Task.Delay(st == ConnState.Locked ? 30000 : 600 * retry, cts.Token).ConfigureAwait(false); } catch { break; }
+                // Dien thoai co the da doi dia chi IP (WiFi cap lai): tim lai bang ma dinh danh
+                if (st == ConnState.Disconnected && PhoneId != "" && (retry == 2 || retry % 4 == 0))
+                {
+                    try
+                    {
+                        var found = (await Discovery.Scan(1500).ConfigureAwait(false)).FirstOrDefault(p => p.Id == PhoneId);
+                        if (found != null && found.Host != Host) { Host = found.Host; HostChanged?.Invoke(found.Host); retry = 0; continue; }
+                    }
+                    catch { }
+                }
+                var k = kick = new TaskCompletionSource<bool>();
+                try { await Task.WhenAny(Task.Delay(st == ConnState.Locked ? 30000 : 500 * retry, cts.Token), k.Task).ConfigureAwait(false); } catch { }
+                if (cts.IsCancellationRequested) break;
+                if (k.Task.IsCompleted) retry = 0;
+            }
+        }
+
+        /// <summary>Hoi dien thoai moi 5 giay; 20 giay khong nghe gi thi coi nhu mat ket noi de noi lai ngay.</summary>
+        async Task Watchdog(WsClient s)
+        {
+            while (s.IsOpen && !cts.IsCancellationRequested)
+            {
+                try { await Task.Delay(5000, cts.Token).ConfigureAwait(false); } catch { return; }
+                if (!s.IsOpen) return;
+                if (Environment.TickCount - lastRx > 20000)
+                {
+                    LastError = DateTime.Now.ToString("HH:mm:ss") + " Điện thoại không phản hồi 20 giây";
+                    try { s.Dispose(); } catch { }
+                    return;
+                }
+                Send("t", "ping", "ts", Environment.TickCount & 0xFFFFFFFFL);
             }
         }
 
@@ -179,10 +231,17 @@ namespace LinkDesk
                 if (r == null) return;
                 var data = r.Value.data;
                 BytesReceived += data.Length;
+                lastRx = Environment.TickCount;
                 if (r.Value.text)
                 {
                     Dictionary<string, object> m = null;
                     try { m = J.Parse(Encoding.UTF8.GetString(data)); } catch { }
+                    if (m != null && m.S("t") == "pong" && m.Has("ts"))
+                    {
+                        long ts = m.L("ts");
+                        LatencyMs = (int)Math.Max(0, (Environment.TickCount & 0xFFFFFFFFL) - ts);
+                        continue;
+                    }
                     if (m != null) Message?.Invoke(m);
                 }
                 else

@@ -17,7 +17,8 @@ public final class Commands {
 
     public static void sendHello(Context ctx, WsConn c) throws Exception {
         c.sendText(status(ctx).put("t", "hello").put("model", Build.MANUFACTURER + " " + Build.MODEL)
-                .put("android", Build.VERSION.RELEASE).put("name", Discovery.deviceName(ctx)).toString());
+                .put("android", Build.VERSION.RELEASE).put("name", Discovery.deviceName(ctx))
+                .put("id", android.provider.Settings.Secure.getString(ctx.getContentResolver(), android.provider.Settings.Secure.ANDROID_ID)).toString());
         MirrorService m = Hub.mirror;
         if (m != null) m.requestFrame();
         NotifService n = Hub.notif;
