@@ -42,7 +42,7 @@ public class MainActivity extends Activity {
             BLUE = 0xFF2563EB, BLUE_SOFT = 0xFFE8EFFE, GREEN = 0xFF16A34A, GREEN_SOFT = 0xFFE7F6EC,
             ORANGE = 0xFFC2410C, ORANGE_SOFT = 0xFFFDEDE3, RED = 0xFFDC2626, RED_SOFT = 0xFFFDECEC, LINE = 0xFFE6E9EF;
 
-    private TextView heroTitle, heroSub, addrText, pinText, statusDot;
+    private TextView heroTitle, heroSub, addrText, pinText, statusDot, secText;
     private Button mainBtn;
     private TextView controlChip, notifChip, photoChip, fileChip, smsChip, callChip, audioChip;
     private Button controlBtn, notifBtn, photoBtn, fileBtn, smsBtn, callBtn, audioBtn;
@@ -250,6 +250,8 @@ public class MainActivity extends Activity {
         pinText = text("", 28, TEXT, true);
         pinText.setLetterSpacing(0.2f);
         pl.addView(pinText);
+        secText = text("", 12, MUTED, false);
+        pl.addView(secText);
         prow.addView(pl, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
         TextView newPin = text("Đổi PIN", 14, BLUE, true);
         newPin.setPadding(dp(10), dp(8), dp(4), dp(8));
@@ -459,6 +461,8 @@ public class MainActivity extends Activity {
     private void refresh() {
         List<String> ips = Net.localIps();
         pinText.setText(Prefs.getPin(this));
+        String fp = TlsCert.fingerprint();
+        secText.setText(fp != null ? "Mã bảo mật: " + TlsCert.shortCode(fp) + " · kết nối được mã hoá" : "");
         if (ips.isEmpty()) {
             addrText.setText("Chưa kết nối WiFi");
         } else {

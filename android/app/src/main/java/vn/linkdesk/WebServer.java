@@ -35,7 +35,7 @@ public class WebServer {
     private static final long LOCK_MS = 60_000;
 
     private final Context ctx;
-    private ServerSocket server;
+    private ServerSocket server, tlsServer;
     private volatile boolean running;
     private final Map<String, long[]> fails = new HashMap<>(); // ip -> {count, lockUntil}
 
@@ -48,9 +48,23 @@ public class WebServer {
         server.setReuseAddress(true);
         server.bind(new InetSocketAddress(Hub.PORT));
         running = true;
+        startAccept(server, "web-accept");
+        // Cong ma hoa TLS (may tinh ban moi dung cong nay)
+        try {
+            javax.net.ssl.SSLServerSocket ts = (javax.net.ssl.SSLServerSocket) TlsCert.context(ctx.getFilesDir()).getServerSocketFactory().createServerSocket();
+            ts.setReuseAddress(true);
+            ts.bind(new InetSocketAddress(Hub.TLS_PORT));
+            tlsServer = ts;
+            startAccept(ts, "tls-accept");
+        } catch (Exception e) {
+            Log.w(TAG, "tls server", e);
+        }
+    }
+
+    private void startAccept(final ServerSocket ss, String name) {
         Thread t = new Thread(new Runnable() {
-            @Override public void run() { acceptLoop(); }
-        }, "web-accept");
+            @Override public void run() { acceptLoop(ss); }
+        }, name);
         t.setDaemon(true);
         t.start();
     }
@@ -58,13 +72,14 @@ public class WebServer {
     public void stop() {
         running = false;
         try { if (server != null) server.close(); } catch (IOException ignored) {}
+        try { if (tlsServer != null) tlsServer.close(); } catch (IOException ignored) {}
         Hub.closeAllClients();
     }
 
-    private void acceptLoop() {
+    private void acceptLoop(ServerSocket ss) {
         while (running) {
             try {
-                final Socket s = server.accept();
+                final Socket s = ss.accept();
                 Thread t = new Thread(new Runnable() {
                     @Override public void run() { handle(s); }
                 }, "web-conn");

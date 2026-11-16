@@ -443,7 +443,7 @@ namespace LinkDesk
             photoInfo.Text = "";
             screen.Banner = null;
             screen.ClearFrame("Đang kết nối tới " + nameLbl.Text + "…");
-            var c = new PhoneClient(e.Host, e.Port, e.Pin);
+            var c = new PhoneClient(e.Host, e.Port, e.Pin, e.CertSha);
             client = c;
             c.Frame += (bmp, w, h) =>
             {
@@ -464,7 +464,18 @@ namespace LinkDesk
             switch (st)
             {
                 case ConnState.Connecting: connText = "Đang kết nối…"; connColor = Theme.Muted; break;
-                case ConnState.Connected: connText = "Đã kết nối"; connColor = Theme.Green; tray.Text = "LinkDesk – đã kết nối"; break;
+                case ConnState.Connected:
+                    connText = "Đã kết nối"; connColor = Theme.Green; tray.Text = "LinkDesk – đã kết nối";
+                    // Dien thoai vua len ban co ma hoa: ghim chung chi o lan dau
+                    if (client != null && client.Secure && string.IsNullOrEmpty(current?.CertSha) && !string.IsNullOrEmpty(client.ObservedSha))
+                    { current.CertSha = client.ObservedSha; Cfg.Remember(current); }
+                    break;
+                case ConnState.BadCert:
+                    connText = "Mã bảo mật thay đổi"; connColor = Theme.Red;
+                    screen.ClearFrame("Mã bảo mật của điện thoại đã thay đổi.");
+                    client?.Dispose(); client = null;
+                    if (Visible) ShowConnect(msg);
+                    break;
                 case ConnState.Locked: connText = "Bị khoá tạm do nhập sai PIN"; connColor = Theme.Red; break;
                 case ConnState.Disconnected:
                     StopPlayer();
@@ -496,7 +507,7 @@ namespace LinkDesk
                 var p = found.FirstOrDefault(f => f.Id == current.Id);
                 if (p != null && (p.Host != current.Host || p.Port != current.Port))
                 {
-                    var e = new PhoneEntry { Id = current.Id, Name = p.Name, Host = p.Host, Port = p.Port, Pin = current.Pin };
+                    var e = new PhoneEntry { Id = current.Id, Name = p.Name, Host = p.Host, Port = p.Port, Pin = current.Pin, CertSha = current.CertSha };
                     Cfg.Remember(e);
                     Connect(e);
                 }
@@ -569,7 +580,8 @@ namespace LinkDesk
         public string PhoneInfo =>
             client == null ? "Chưa kết nối" :
             phoneName + "\n" + phoneModel + " · Android " + androidVer + "\nĐịa chỉ: " + current?.Host +
-            (LastStatus.Has("appVersion") ? "\nApp điện thoại: " + LastStatus.S("appVersion") : "");
+            (LastStatus.Has("appVersion") ? "\nApp điện thoại: " + LastStatus.S("appVersion") : "") +
+            (client.Secure ? "\nKết nối mã hoá · mã bảo mật " + Tls.ShortCode(client.ObservedSha ?? current?.CertSha) : "\nKết nối chưa mã hoá (cập nhật app điện thoại để bật)");
 
         public void Send(params object[] kv) => client?.Send(kv);
 
@@ -603,6 +615,7 @@ namespace LinkDesk
                 long b = c.BytesReceived;
                 int f = c.FramesReceived; c.FramesReceived = 0;
                 chips.Add(("\uE714", f + "/" + LastStatus.L("fps", 30) + " khung/s", Theme.Text2));
+                if (!c.Secure) chips.Add(("\uE7BA", "Chưa mã hoá", Theme.Orange));
                 if (LastStatus.Has("control") && !LastStatus.B("control")) chips.Add(("\uE7B3", "Chỉ xem", Theme.Orange));
                 subLbl.Set(chips.ToArray());
                 lastBytes = b;

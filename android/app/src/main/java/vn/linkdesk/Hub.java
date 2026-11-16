@@ -10,6 +10,8 @@ public final class Hub {
     private Hub() {}
 
     public static final int PORT = 8686;
+    /** Cong HTTPS/WSS (ma hoa). */
+    public static final int TLS_PORT = 8688;
 
     public static volatile ControlService control;
     public static volatile NotifService notif;

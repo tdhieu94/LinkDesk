@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace LinkDesk
 {
-    public enum ConnState { Connecting, Connected, Disconnected, BadPin, Locked }
+    public enum ConnState { Connecting, Connected, Disconnected, BadPin, Locked, BadCert }
 
     /// <summary>Ket noi toi app LinkDesk tren dien thoai (WebSocket + HTTP).</summary>
     public sealed class PhoneClient : IDisposable
@@ -19,6 +19,10 @@ namespace LinkDesk
         public readonly string Host;
         public readonly int Port;
         public readonly string Pin;
+        public readonly string CertSha;
+        /// <summary>Dang dung ket noi ma hoa (HTTPS/WSS).</summary>
+        public volatile bool Secure;
+        public string ObservedSha;
 
         public event Action<Bitmap, int, int> Frame;               // anh, rong hop le, cao hop le
         public event Action<Dictionary<string, object>> Message;
@@ -28,23 +32,58 @@ namespace LinkDesk
         public long BytesReceived;
         public int FramesReceived;
 
-        ClientWebSocket ws;
+        WsClient ws;
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
-        static readonly HttpClient http = new HttpClient(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromSeconds(5) };
-        static readonly HttpClient upHttp = new HttpClient(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromHours(2) };
+        static readonly HttpClient http = new HttpClient(Tls.Handler()) { Timeout = TimeSpan.FromSeconds(5) };
+        static readonly HttpClient upHttp = new HttpClient(Tls.Handler()) { Timeout = TimeSpan.FromHours(2) };
 
-        public PhoneClient(string host, int port, string pin)
+        public PhoneClient(string host, int port, string pin, string certSha = "")
         {
-            Host = host; Port = port; Pin = pin;
+            Host = host; Port = port; Pin = pin; CertSha = certSha ?? "";
         }
 
-        string Base => "http://" + Host + ":" + Port;
+        string Base => Secure ? "https://" + Host + ":" + (Port + Tls.PortOffset) : "http://" + Host + ":" + Port;
 
-        public bool IsOpen => ws != null && ws.State == WebSocketState.Open;
+        public const string CertChangedMsg = "Mã bảo mật của điện thoại đã thay đổi (có thể do cài lại app LinkDesk, hoặc có thiết bị lạ đang giả mạo). Hãy kiểm tra rồi nhập lại mã PIN để ghép đôi lại.";
+
+        public bool IsOpen => ws != null && ws.IsOpen;
 
         /// <summary>Kiem tra PIN. Tra ve null neu dung, hoac thong bao loi.</summary>
         public static async Task<(ConnState state, string msg)> Check(string host, int port, string pin)
+        {
+            var (st, msg, _, _) = await CheckSecure(host, port, pin, "").ConfigureAwait(false);
+            return (st, msg);
+        }
+
+        /// <summary>
+        /// Thu ket noi ma hoa truoc. Neu dien thoai da ghim chung chi (certSha) thi bat buoc ma hoa;
+        /// neu chua (app dien thoai ban cu) thi moi dung ket noi thuong.
+        /// </summary>
+        public static async Task<(ConnState state, string msg, bool secure, string sha)> CheckSecure(string host, int port, string pin, string certSha)
+        {
+            int tp = port + Tls.PortOffset;
+            Tls.Expect(host, tp, certSha);
+            try
+            {
+                var r = await http.GetAsync("https://" + host + ":" + tp + "/check?pin=" + Uri.EscapeDataString(pin ?? "")).ConfigureAwait(false);
+                string sha = Tls.Observed(host, tp);
+                if (r.IsSuccessStatusCode) return (ConnState.Connected, null, true, sha);
+                string body = await r.Content.ReadAsStringAsync().ConfigureAwait(false);
+                if ((int)r.StatusCode == 429) return (ConnState.Locked, body, true, sha);
+                return (ConnState.BadPin, "Sai mã PIN", true, sha);
+            }
+            catch (Exception)
+            {
+                if (Tls.Mismatch(host, tp)) return (ConnState.BadCert, CertChangedMsg, true, null);
+                if (!string.IsNullOrEmpty(certSha))
+                    return (ConnState.Disconnected, "Không kết nối được điện thoại. Kiểm tra app LinkDesk đã bấm \"Bắt đầu chia sẻ\" và hai máy dùng chung WiFi.", true, null);
+            }
+            var (st, msg) = await CheckPlain(host, port, pin).ConfigureAwait(false);
+            return (st, msg, false, null);
+        }
+
+        static async Task<(ConnState state, string msg)> CheckPlain(string host, int port, string pin)
         {
             try
             {
@@ -60,7 +99,7 @@ namespace LinkDesk
             }
         }
 
-        static readonly HttpClient mediaHttp = new HttpClient(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromMinutes(10) };
+        static readonly HttpClient mediaHttp = new HttpClient(Tls.Handler()) { Timeout = TimeSpan.FromMinutes(10) };
 
         /// <summary>GET mot duong dan co PIN (anh, bieu tuong...). Loi -> nem Exception voi noi dung tra ve.</summary>
         /// <summary>Tai mot duong dan ve tep (khong giu ca tep trong bo nho).</summary>
@@ -108,16 +147,15 @@ namespace LinkDesk
             while (!cts.IsCancellationRequested)
             {
                 StateChanged?.Invoke(ConnState.Connecting, null);
-                var (st, msg) = await Check(Host, Port, Pin).ConfigureAwait(false);
-                if (st == ConnState.BadPin) { StateChanged?.Invoke(ConnState.BadPin, msg); return; }
+                var (st, msg, secure, sha) = await CheckSecure(Host, Port, Pin, CertSha).ConfigureAwait(false);
+                if (st == ConnState.BadPin || st == ConnState.BadCert) { StateChanged?.Invoke(st, msg); return; }
+                Secure = secure; if (sha != null) ObservedSha = sha;
                 if (st == ConnState.Connected)
                 {
                     try
                     {
-                        ws = new ClientWebSocket();
-                        ws.Options.Proxy = null;
-                        ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
-                        await ws.ConnectAsync(new Uri("ws://" + Host + ":" + Port + "/ws?pin=" + Uri.EscapeDataString(Pin)), cts.Token).ConfigureAwait(false);
+                        ws = new WsClient();
+                        await ws.ConnectAsync(Host, Secure ? Port + Tls.PortOffset : Port, Secure, "/ws?pin=" + Uri.EscapeDataString(Pin), cts.Token).ConfigureAwait(false);
                         retry = 0;
                         StateChanged?.Invoke(ConnState.Connected, null);
                         await ReceiveLoop(ws).ConfigureAwait(false);
@@ -132,30 +170,22 @@ namespace LinkDesk
             }
         }
 
-        async Task ReceiveLoop(ClientWebSocket s)
+        async Task ReceiveLoop(WsClient s)
         {
-            var buf = new byte[256 * 1024];
-            var ms = new MemoryStream();
-            while (s.State == WebSocketState.Open && !cts.IsCancellationRequested)
+            while (s.IsOpen && !cts.IsCancellationRequested)
             {
-                ms.SetLength(0);
-                WebSocketReceiveResult r;
-                do
-                {
-                    r = await s.ReceiveAsync(new ArraySegment<byte>(buf), cts.Token).ConfigureAwait(false);
-                    if (r.MessageType == WebSocketMessageType.Close) return;
-                    ms.Write(buf, 0, r.Count);
-                } while (!r.EndOfMessage);
-                BytesReceived += ms.Length;
-                if (r.MessageType == WebSocketMessageType.Text)
+                var r = await s.ReceiveAsync(cts.Token).ConfigureAwait(false);
+                if (r == null) return;
+                var data = r.Value.data;
+                BytesReceived += data.Length;
+                if (r.Value.text)
                 {
                     Dictionary<string, object> m = null;
-                    try { m = J.Parse(Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length)); } catch { }
+                    try { m = J.Parse(Encoding.UTF8.GetString(data)); } catch { }
                     if (m != null) Message?.Invoke(m);
                 }
                 else
                 {
-                    var data = ms.ToArray();
                     if (data.Length > 1 && data[0] == 3) { Audio?.Invoke(data); continue; }
                     if (data.Length < 6 || data[0] != 1) continue;
                     int w = (data[1] << 8) | data[2], h = (data[3] << 8) | data[4];
@@ -174,12 +204,12 @@ namespace LinkDesk
         public void Send(object o)
         {
             var s = ws;
-            if (s == null || s.State != WebSocketState.Open) return;
-            var bytes = Encoding.UTF8.GetBytes(J.Ser(o));
+            if (s == null || !s.IsOpen) return;
+            var text = J.Ser(o);
             Task.Run(async () =>
             {
                 await sendLock.WaitAsync().ConfigureAwait(false);
-                try { await s.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false); }
+                try { await s.SendText(text).ConfigureAwait(false); }
                 catch { }
                 finally { sendLock.Release(); }
             });
@@ -209,7 +239,7 @@ namespace LinkDesk
         public void Dispose()
         {
             cts.Cancel();
-            try { ws?.Abort(); } catch { }
+            try { ws?.Dispose(); } catch { }
         }
 
         sealed class ProgressContent : HttpContent

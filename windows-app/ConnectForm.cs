@@ -149,10 +149,10 @@ namespace LinkDesk
             if (p.Length != 6) { err.Text = "Mã PIN gồm 6 số."; pin.Box.Focus(); return; }
             okBtn.Enabled = false; okBtn.SetText("Đang kết nối…"); okBtn.AutoFit(Theme.S(W)); okBtn.Height = Theme.S(42);
             err.Text = "";
-            var (st, msg) = await PhoneClient.Check(a, port, p);
+            var (st, msg, secure, sha) = await PhoneClient.CheckSecure(a, port, p, "");
             okBtn.Enabled = true; okBtn.SetText("Kết nối"); okBtn.AutoFit(Theme.S(W)); okBtn.Height = Theme.S(42);
             if (st != ConnState.Connected) { err.Text = msg; return; }
-            Result = new PhoneEntry { Host = a, Port = port, Pin = p, Id = foundId ?? "", Name = string.IsNullOrEmpty(foundName) ? a : foundName };
+            Result = new PhoneEntry { Host = a, Port = port, Pin = p, CertSha = secure ? sha ?? "" : "", Id = foundId ?? "", Name = string.IsNullOrEmpty(foundName) ? a : foundName };
             DialogResult = DialogResult.OK;
             Close();
         }

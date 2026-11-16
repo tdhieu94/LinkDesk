@@ -15,6 +15,8 @@ App **không dùng adb**, nên **không cần bật Tùy chọn nhà phát tri�
 
 > **Lưu ý:** bản này mới được build và kiểm tra trên máy chủ (app Windows và giao diện web đã chạy thử với điện thoại giả lập). **Chưa được chạy trên điện thoại thật và Windows thật.** Nếu có lỗi, bạn gửi ảnh chụp hoặc mô tả để sửa.
 
+> **Mới ở bản 0.11.0 (máy tính) + 0.9.0 (điện thoại):** **mã hoá kết nối**. Hình ảnh, tin nhắn, tệp, âm thanh và mã PIN giữa máy tính và điện thoại giờ được mã hoá (TLS), người khác cùng WiFi không xem trộm được. Không cần làm gì thêm: cập nhật cả hai app là tự bật. Trong app điện thoại có dòng **"Mã bảo mật: XXXX XXXX"**, trên máy tính xem ở Cài đặt > Điện thoại; hai mã phải giống nhau. Nếu máy tính báo "Mã bảo mật thay đổi" mà bạn không cài lại app điện thoại, đừng nhập PIN và hãy kiểm tra WiFi.
+
 > **Mới ở bản 0.10.0 (máy tính) + 0.8.0 (điện thoại):** **nghe âm thanh điện thoại trên máy tính** (nhạc, video, game). Bấm nút loa ở thanh dọc bên phải màn hình để bật/tắt; chỉnh âm lượng trong Cài đặt > Âm thanh. Lần đầu: trong app LinkDesk trên điện thoại, mục Quyền, bấm **"Cho phép âm thanh"** (Android sẽ hỏi quyền Micro, nhưng LinkDesk chỉ lấy âm thanh đang phát, không thu micro). Cần Android 10 trở lên và đang chia sẻ màn hình.
 
 > **Mới ở bản 0.9.0 (máy tính) + 0.7.0 (điện thoại):** tab **Tin nhắn** để đọc và gửi SMS ngay trên máy tính, và tab **Cuộc gọi** có lịch sử cuộc gọi, tìm trong danh bạ, bàn phím quay số. Bấm "Gọi" thì điện thoại sẽ gọi đi; bạn nghe và nói bằng điện thoại hoặc tai nghe nối với điện thoại. Lần đầu dùng, mở app LinkDesk trên điện thoại, mục Quyền, bật **Tin nhắn** và **Cuộc gọi**. Trên Android 13 trở lên, nếu Android báo "Cài đặt bị hạn chế", vào Cài đặt > Ứng dụng > LinkDesk, bấm dấu ⋮ góc trên bên phải, chọn **"Cho phép cài đặt hạn chế"**, rồi bật lại quyền.
@@ -167,7 +169,7 @@ Sau đó **tắt Tùy chọn nhà phát triển như bình thường**, vì quy�
 - Hình gửi dạng ảnh JPEG nên **độ trễ và độ nét kém scrcpy** một chút. WiFi yếu thì chọn "Mượt 720p".
 - Nếu **tắt hẳn màn hình** bằng nút nguồn thì hình sẽ dừng (xem mục "Khi màn hình điện thoại tắt").
 - Chỉ dùng được trong **cùng mạng WiFi** (không qua Internet).
-- Kết nối trong mạng nội bộ **không mã hoá**, chỉ được bảo vệ bằng PIN. Chỉ nên dùng ở WiFi nhà hoặc WiFi tin cậy, không dùng WiFi quán cà phê. Nhập sai PIN 5 lần sẽ bị khoá 1 phút. Có thể bấm **Đổi mã PIN** bất cứ lúc nào.
+- Từ bản 0.11.0 (máy tính) + 0.9.0 (điện thoại), kết nối giữa app máy tính và điện thoại được **mã hoá TLS**. Lần ghép đôi đầu tiên máy tính ghi nhớ "mã bảo mật" của điện thoại; nếu sau này mã khác đi (cài lại app, hoặc thiết bị lạ giả mạo) máy tính sẽ dừng và hỏi lại PIN. Riêng trang web dự phòng (mở bằng trình duyệt) vẫn chưa mã hoá, nên chỉ dùng trình duyệt ở WiFi tin cậy. Nhập sai PIN 5 lần sẽ bị khoá 1 phút. Có thể bấm **Đổi mã PIN** bất cứ lúc nào.
 - Gọi điện: cuộc gọi diễn ra trên điện thoại, máy tính chưa nghe/nói được trong cuộc gọi.
 
 ---

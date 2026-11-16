@@ -14,6 +14,8 @@ namespace LinkDesk
         public string Host { get; set; } = "";
         public int Port { get; set; } = 8686;
         public string Pin { get; set; } = "";
+        /// <summary>Dau van tay SHA-256 chung chi TLS cua dien thoai (rong = chua ghep doi ma hoa).</summary>
+        public string CertSha { get; set; } = "";
     }
 
     public class Config

@@ -64,6 +64,7 @@ public class Discovery {
                         .put("name", deviceName(ctx))
                         .put("model", Build.MANUFACTURER + " " + Build.MODEL)
                         .put("port", Hub.PORT)
+                        .put("tls", Hub.TLS_PORT)
                         .put("id", Settings.Secure.getString(ctx.getContentResolver(), Settings.Secure.ANDROID_ID))
                         .toString();
                 byte[] out = reply.getBytes(StandardCharsets.UTF_8);

@@ -15,6 +15,7 @@ namespace LinkDesk
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            Tls.Init();
 
             if (args.Contains("--uninstall")) { Installer.Uninstall(); return; }
             if (args.Length >= 3 && args[0] == "--apply-update")
