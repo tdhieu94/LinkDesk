@@ -168,6 +168,8 @@ public class WebServer {
                 out.write(resp.getBytes(StandardCharsets.US_ASCII));
                 out.flush();
                 s.setSoTimeout(0);
+                // Bo dem gui nho: WiFi cham thi khong don nhieu khung hinh cu (giam do tre)
+                try { s.setSendBufferSize(160 * 1024); } catch (Exception ignored) {}
                 new WsConn(ctx, s, in, out).run(); // chay den khi dong
                 return;
             } else if (method.equals("POST") && path.equals("/upload")) {

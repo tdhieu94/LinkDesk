@@ -78,6 +78,84 @@ public class ControlService extends AccessibilityService {
         }, null);
     }
 
+    // ---- cham theo thoi gian thuc: ngon tay xuong ngay khi bam chuot, di theo chuot, nhac len khi nha
+    private final Object touchLock = new Object();
+    private GestureDescription.StrokeDescription stroke;
+    private float tx, ty;
+    private boolean touchBusy, touchUp;
+    private long lastSeg;
+    private int touchGen;
+    private final java.util.ArrayList<float[]> touchPts = new java.util.ArrayList<>();
+
+    public void touchDown(float x, float y) {
+        synchronized (touchLock) {
+            touchPts.clear(); touchUp = false;
+            stroke = null;
+            touchGen++;
+            Path p = new Path();
+            p.moveTo(x, y);
+            tx = x; ty = y;
+            try { stroke = new GestureDescription.StrokeDescription(p, 0, 1, true); }
+            catch (Exception e) { stroke = null; return; }
+            lastSeg = android.os.SystemClock.uptimeMillis();
+            touchBusy = true;
+            send(stroke, false);
+        }
+    }
+
+    public void touchMove(float x, float y) {
+        synchronized (touchLock) {
+            if (stroke == null && !touchBusy) return;
+            touchPts.add(new float[]{x, y});
+            if (!touchBusy) nextSegment();
+        }
+    }
+
+    public void touchUp(float x, float y) {
+        synchronized (touchLock) {
+            if (stroke == null && !touchBusy) return;
+            touchPts.add(new float[]{x, y});
+            touchUp = true;
+            if (!touchBusy) nextSegment();
+        }
+    }
+
+    /** Goi khi da giu touchLock va khong co doan nao dang chay. */
+    private void nextSegment() {
+        if (stroke == null) { touchPts.clear(); touchUp = false; return; }
+        if (touchPts.isEmpty() && !touchUp) return;
+        Path p = new Path();
+        p.moveTo(tx, ty);
+        for (float[] pt : touchPts) { p.lineTo(pt[0], pt[1]); tx = pt[0]; ty = pt[1]; }
+        touchPts.clear();
+        long now = android.os.SystemClock.uptimeMillis();
+        long dur = Math.max(8, Math.min(100, now - lastSeg));
+        lastSeg = now;
+        boolean end = touchUp;
+        try { stroke = stroke.continueStroke(p, 0, dur, !end); }
+        catch (Exception e) { stroke = null; touchUp = false; return; }
+        touchBusy = true;
+        send(stroke, end);
+    }
+
+    private void send(GestureDescription.StrokeDescription s, final boolean end) {
+        final int g = touchGen;
+        boolean ok = dispatchGesture(new GestureDescription.Builder().addStroke(s).build(), new GestureResultCallback() {
+            @Override public void onCompleted(GestureDescription gd) {
+                synchronized (touchLock) {
+                    if (g != touchGen) return;
+                    touchBusy = false;
+                    if (end) { stroke = null; touchUp = false; }
+                    else nextSegment();
+                }
+            }
+            @Override public void onCancelled(GestureDescription gd) {
+                synchronized (touchLock) { if (g != touchGen) return; touchBusy = false; stroke = null; touchUp = false; touchPts.clear(); }
+            }
+        }, null);
+        if (!ok) { touchBusy = false; stroke = null; touchUp = false; touchPts.clear(); }
+    }
+
     public boolean scroll(float x, float y, float dyPx, int screenH) {
         float endY = Math.max(5, Math.min(screenH - 5, y - dyPx));
         if (Math.abs(endY - y) < 5) return false;
@@ -94,6 +172,35 @@ public class ControlService extends AccessibilityService {
         AccessibilityNodeInfo n = findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
         if (n != null && n.isEditable()) return n;
         return n;
+    }
+
+    // Ung dung cap nhat o nhap cham hon toc do go: nho chu va con tro vua dat de lan go sau khong doc phai chu cu
+    private AccessibilityNodeInfo lastNode;
+    private String lastText;
+    private int lastCursor;
+    private long lastAt;
+
+    private CharSequence textOf(AccessibilityNodeInfo n) {
+        CharSequence t = currentText(n);
+        if (lastNode != null && lastText != null && n.equals(lastNode)
+                && android.os.SystemClock.uptimeMillis() - lastAt < 1500 && !t.toString().equals(lastText)) return lastText;
+        return t;
+    }
+
+    private int[] selOf(AccessibilityNodeInfo n, int len) {
+        int s = n.getTextSelectionStart(), e = n.getTextSelectionEnd();
+        if (lastNode != null && lastText != null && n.equals(lastNode) && android.os.SystemClock.uptimeMillis() - lastAt < 1500
+                && !currentText(n).toString().equals(lastText)) { s = e = lastCursor; }
+        if (s < 0 || e < 0 || s > len || e > len) { s = e = len; }
+        if (s > e) { int t = s; s = e; e = t; }
+        return new int[]{s, e};
+    }
+
+    private boolean setTextTracked(AccessibilityNodeInfo n, CharSequence text, int cursor) {
+        boolean ok = setText(n, text, cursor);
+        if (ok) { lastNode = n; lastText = text.toString(); lastCursor = cursor; lastAt = android.os.SystemClock.uptimeMillis(); }
+        else lastNode = null;
+        return ok;
     }
 
     private static CharSequence currentText(AccessibilityNodeInfo n) {
@@ -125,12 +232,11 @@ public class ControlService extends AccessibilityService {
         if (n.isPassword() || !n.isEditable()) {
             return paste(n, text) ? null : "Không gõ được vào ô này.";
         }
-        CharSequence cur = currentText(n);
-        int s = n.getTextSelectionStart(), e = n.getTextSelectionEnd();
-        if (s < 0 || e < 0 || s > cur.length() || e > cur.length()) { s = e = cur.length(); }
-        if (s > e) { int t = s; s = e; e = t; }
+        CharSequence cur = textOf(n);
+        int[] se = selOf(n, cur.length());
+        int s = se[0], e = se[1];
         String next = cur.subSequence(0, s) + text + cur.subSequence(e, cur.length());
-        if (setText(n, next, s + text.length())) return null;
+        if (setTextTracked(n, next, s + text.length())) return null;
         return paste(n, text) ? null : "Ô nhập này không cho phép gõ từ xa.";
     }
 
@@ -146,11 +252,10 @@ public class ControlService extends AccessibilityService {
             if ("enter".equals(key)) return null;
             return "Chưa chọn ô nhập chữ.";
         }
-        CharSequence cur = currentText(n);
+        CharSequence cur = textOf(n);
         int len = cur.length();
-        int s = n.getTextSelectionStart(), e = n.getTextSelectionEnd();
-        if (s < 0 || e < 0 || s > len || e > len) { s = e = len; }
-        if (s > e) { int t = s; s = e; e = t; }
+        int[] se = selOf(n, len);
+        int s = se[0], e = se[1];
         switch (key) {
             case "backspace": {
                 if (s == e) {
@@ -158,7 +263,7 @@ public class ControlService extends AccessibilityService {
                     s = s - 1;
                     if (s > 0 && Character.isLowSurrogate(cur.charAt(s)) && Character.isHighSurrogate(cur.charAt(s - 1))) s--;
                 }
-                setText(n, "" + cur.subSequence(0, s) + cur.subSequence(e, len), s);
+                setTextTracked(n, "" + cur.subSequence(0, s) + cur.subSequence(e, len), s);
                 return null;
             }
             case "delete": {
@@ -167,14 +272,14 @@ public class ControlService extends AccessibilityService {
                     e = e + 1;
                     if (e < len && Character.isLowSurrogate(cur.charAt(e))) e++;
                 }
-                setText(n, "" + cur.subSequence(0, s) + cur.subSequence(e, len), s);
+                setTextTracked(n, "" + cur.subSequence(0, s) + cur.subSequence(e, len), s);
                 return null;
             }
-            case "left": setSelection(n, Math.max(0, s - 1), Math.max(0, s - 1)); return null;
-            case "right": setSelection(n, Math.min(len, e + 1), Math.min(len, e + 1)); return null;
-            case "home": setSelection(n, 0, 0); return null;
-            case "end": setSelection(n, len, len); return null;
-            case "selectall": setSelection(n, 0, len); return null;
+            case "left": lastNode = null; setSelection(n, Math.max(0, s - 1), Math.max(0, s - 1)); return null;
+            case "right": lastNode = null; setSelection(n, Math.min(len, e + 1), Math.min(len, e + 1)); return null;
+            case "home": lastNode = null; setSelection(n, 0, 0); return null;
+            case "end": lastNode = null; setSelection(n, len, len); return null;
+            case "selectall": lastNode = null; setSelection(n, 0, len); return null;
             case "enter": {
                 if (Build.VERSION.SDK_INT >= 30) {
                     if (n.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId())) return null;
@@ -189,7 +294,7 @@ public class ControlService extends AccessibilityService {
             case "cut": {
                 if (s == e) return "Hãy bôi đen chữ cần cắt trước.";
                 String sel = "" + cur.subSequence(s, e);
-                setText(n, "" + cur.subSequence(0, s) + cur.subSequence(e, len), s);
+                setTextTracked(n, "" + cur.subSequence(0, s) + cur.subSequence(e, len), s);
                 return "COPY:" + sel;
             }
             default: return "Phím không hỗ trợ: " + key;

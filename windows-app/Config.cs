@@ -36,6 +36,8 @@ namespace LinkDesk
         public bool H264 { get; set; } = false;
         public bool TopMost { get; set; }
         public bool PhotoBackup { get; set; }
+        /// <summary>Gui cham/keo ngay khi bam chuot (dien thoai 0.16+).</summary>
+        public bool LiveTouch { get; set; } = true;
         public int PipX { get; set; }
         public int PipY { get; set; }
         public int PipW { get; set; }

@@ -559,6 +559,7 @@ namespace LinkDesk
                     modelLbl.Text = phoneModel + (androidVer != "" ? " · Android " + androidVer : "");
                     LoadWallpaper();
                     OnStatus(m);
+                    screen.Streaming = Cfg.LiveTouch && PhoneAtLeast(0, 16);
                     if (Cfg.Audio) client?.Send("t", "audio", "on", true);
                     if (Cfg.H264 && !h264Failed) RequestCodec();
                     lastView = null; UpdateViewing(true);
@@ -889,6 +890,46 @@ namespace LinkDesk
                 updateBtn.SetText("Cập nhật " + i.Version.ToString(3));
                 MessageBox.Show(this, "Không tải được bản cập nhật: " + ex.Message + "\n\nBạn có thể tải tay tại:\n" + Updater.ReleasesPage, "LinkDesk", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+        }
+
+        public void ApplyLiveTouch() => screen.Streaming = Cfg.LiveTouch && PhoneAtLeast(0, 16);
+
+        // ------------------------------------------------------------------ ban phim luon sang dien thoai
+        bool keyFwd;
+
+        bool ShouldForwardKeys()
+        {
+            if (screen.Focused || pip != null || tabs.Selected != 0) return false;
+            if (client == null || !client.IsOpen || !screen.HasFrame) return false;
+            var a = ActiveControl;
+            while (a is ContainerControl cc && cc.ActiveControl != null) a = cc.ActiveControl;
+            return !(a is TextBoxBase || a is ComboBox);
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            keyFwd = false;
+            if (!e.Alt && ShouldForwardKeys())
+            {
+                screen.Focus();
+                screen.ForwardKeyDown(e);
+                keyFwd = true;
+                // Space/Enter khong duoc bam nham nut dang chon tren cua so
+                if (e.KeyCode == Keys.Space && !e.Control) { screen.ForwardKeyPress(new KeyPressEventArgs(' ')); keyFwd = false; e.Handled = true; e.SuppressKeyPress = true; }
+                if (e.KeyCode == Keys.Enter) { e.Handled = true; e.SuppressKeyPress = true; }
+            }
+            base.OnKeyDown(e);
+        }
+
+        protected override void OnKeyPress(KeyPressEventArgs e)
+        {
+            if (keyFwd || ShouldForwardKeys())
+            {
+                keyFwd = false;
+                screen.ForwardKeyPress(e);
+                e.Handled = true;
+            }
+            base.OnKeyPress(e);
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)

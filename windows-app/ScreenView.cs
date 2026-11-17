@@ -32,7 +32,7 @@ namespace LinkDesk
             ForeColor = Theme.Muted;
             Cursor = Cursors.Hand;
             TabStop = true;
-            textTimer.Interval = 40;
+            textTimer.Interval = 25;
             textTimer.Tick += (s, e) => FlushText();
             wheelTimer.Interval = 90;
             wheelTimer.Tick += (s, e) => FlushWheel();
@@ -165,6 +165,12 @@ namespace LinkDesk
 
         bool InImage(Point p) => ImageRect().Contains(p);
 
+        /// <summary>Dien thoai ho tro cham theo thoi gian thuc (ban 0.16 tro len).</summary>
+        public bool Streaming;
+        bool touching;
+        int lastMoveTick;
+        double[] lastSent;
+
         class Down { public DateTime Start; public List<double[]> Pts = new List<double[]>(); public DateTime MovedAt; public bool Moved; }
         Down down;
 
@@ -185,12 +191,31 @@ namespace LinkDesk
             if (e.Button == MouseButtons.Right || e.Button == MouseButtons.XButton1) { Send("t", "key", "k", "back"); return; }
             if (e.Button == MouseButtons.Middle) { Send("t", "key", "k", "home"); return; }
             if (e.Button != MouseButtons.Left || !InImage(e.Location)) return;
+            FlushText();
+            if (Streaming)
+            {
+                var p = Norm(e.Location);
+                touching = true; lastSent = p; lastMoveTick = Environment.TickCount;
+                Send("t", "touch", "a", "down", "x", Math.Round(p[0], 4), "y", Math.Round(p[1], 4));
+                return;
+            }
             down = new Down { Start = DateTime.UtcNow };
             down.Pts.Add(Norm(e.Location));
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
         {
+            if (touching)
+            {
+                var q = Norm(e.Location);
+                var r0 = ImageRect();
+                double mx = (q[0] - lastSent[0]) * r0.Width, my = (q[1] - lastSent[1]) * r0.Height;
+                // Gui toi da ~60 lan/giay, bo qua rung nho
+                if (Environment.TickCount - lastMoveTick < 15 || mx * mx + my * my < 4) return;
+                lastMoveTick = Environment.TickCount; lastSent = q;
+                Send("t", "touch", "a", "move", "x", Math.Round(q[0], 4), "y", Math.Round(q[1], 4));
+                return;
+            }
             if (down == null) return;
             var p = Norm(e.Location);
             var first = down.Pts[0];
@@ -204,6 +229,13 @@ namespace LinkDesk
 
         protected override void OnMouseUp(MouseEventArgs e)
         {
+            if (touching && e.Button == MouseButtons.Left)
+            {
+                touching = false;
+                var q = Norm(e.Location);
+                Send("t", "touch", "a", "up", "x", Math.Round(q[0], 4), "y", Math.Round(q[1], 4));
+                return;
+            }
             if (down == null || e.Button != MouseButtons.Left) return;
             var d = down; down = null;
             var now = DateTime.UtcNow;
@@ -314,6 +346,17 @@ namespace LinkDesk
                 e.Handled = true;
             }
             base.OnKeyDown(e);
+        }
+
+        /// <summary>Phim go khi o man hinh khong duoc chon (cua so chinh chuyen sang).</summary>
+        public void ForwardKeyDown(KeyEventArgs e) => OnKeyDown(e);
+        public void ForwardKeyPress(KeyPressEventArgs e) => OnKeyPress(e);
+
+        protected override void OnMouseCaptureChanged(EventArgs e)
+        {
+            // Mat chuot giua chung (vd. cua so khac noi len): nhac ngon tay len de dien thoai khong bi giu cham
+            if (touching && !Capture) { touching = false; if (lastSent != null) Send("t", "touch", "a", "up", "x", lastSent[0], "y", lastSent[1]); }
+            base.OnMouseCaptureChanged(e);
         }
 
         protected override void OnKeyPress(KeyPressEventArgs e)

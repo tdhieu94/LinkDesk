@@ -135,9 +135,11 @@ namespace LinkDesk
             notif.CheckedChanged += (s, e) => { cfg.ShowPhoneNotifications = notif.Checked; cfg.Save(); };
             var upd = Chk("Tự kiểm tra bản cập nhật", cfg.AutoUpdate);
             upd.CheckedChanged += (s, e) => { cfg.AutoUpdate = upd.Checked; cfg.Save(); };
+            var live = Chk("Chạm và kéo theo thời gian thực (mượt hơn)", cfg.LiveTouch);
+            live.CheckedChanged += (s, e) => { cfg.LiveTouch = live.Checked; cfg.Save(); main.ApplyLiveTouch(); };
             var clip = Chk("Tự gửi chữ vừa chép trên máy tính sang điện thoại", cfg.ClipSync);
             clip.CheckedChanged += (s, e) => { cfg.ClipSync = clip.Checked; cfg.Save(); };
-            a.Controls.Add(startup); a.Controls.Add(tray); a.Controls.Add(notif); a.Controls.Add(clip); a.Controls.Add(upd);
+            a.Controls.Add(startup); a.Controls.Add(tray); a.Controls.Add(notif); a.Controls.Add(clip); a.Controls.Add(live); a.Controls.Add(upd);
 
             // --- sao luu anh
             var bk = Section(flow, "Sao lưu ảnh");

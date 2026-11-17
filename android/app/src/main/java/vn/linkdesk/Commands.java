@@ -136,6 +136,16 @@ public final class Commands {
                 if (s != null) s.tap((float) m.getDouble("x") * W, (float) m.getDouble("y") * H, m.optLong("dur", 40));
                 return;
             }
+            case "touch": {
+                ControlService s = needControl(c);
+                if (s == null) return;
+                float x = (float) m.getDouble("x") * W, y = (float) m.getDouble("y") * H;
+                String a = m.optString("a");
+                if (a.equals("down")) s.touchDown(x, y);
+                else if (a.equals("move")) s.touchMove(x, y);
+                else s.touchUp(x, y);
+                return;
+            }
             case "swipe":
             case "drag": {
                 ControlService s = needControl(c);
