@@ -15,6 +15,8 @@ App **không dùng adb**, nên **không cần bật Tùy chọn nhà phát tri�
 
 > **Lưu ý:** bản này mới được build và kiểm tra trên máy chủ (app Windows và giao diện web đã chạy thử với điện thoại giả lập). **Chưa được chạy trên điện thoại thật và Windows thật.** Nếu có lỗi, bạn gửi ảnh chụp hoặc mô tả để sửa.
 
+> **Mới ở bản 0.19.2 (máy tính) + 0.16.2 (điện thoại):** **Sửa lỗi "không giải mã được video H.264 (ProcessOutput lỗi 0x80004005)"**: bộ giải mã có sẵn của Windows chỉ chịu được hình có cạnh dài tới khoảng 2304 điểm ảnh, nên máy tính giờ xin điện thoại mã hoá vừa mức đó. Nếu vẫn lỗi, máy tính tự tạo lại bộ giải mã, rồi lần lượt giảm xuống 1920 và 1280 điểm ảnh trước khi phải dùng chế độ ảnh. Lỗi gần nhất hiện trong Chẩn đoán kết nối. Cần cập nhật cả hai app.
+
 > **Mới ở bản 0.19.1 (máy tính) + 0.16.1 (điện thoại):** **Video H.264 ổn định hơn**: điện thoại tự giảm kích thước hình cho vừa khả năng bộ mã hoá (nhiều máy chỉ mã hoá được tới 1920 điểm ảnh, trước đây chọn độ nét "Gốc" hoặc xoay ngang là lỗi), tự khởi động lại bộ mã hoá khi bị lỗi giữa chừng, và khi phải tạm dùng chế độ ảnh thì máy tính tự thử bật lại H.264 sau ít phút thay vì tắt hẳn.
 
 > **Mới ở bản 0.19.0 (máy tính) + 0.16.0 (điện thoại):** **Chuột mượt hơn**: bấm, giữ, kéo được gửi ngay khi bạn di chuột (trước đây phải nhả chuột điện thoại mới làm lại cả thao tác nên thấy trễ). Có thể tắt ở Cài đặt > Ứng dụng > "Chạm và kéo theo thời gian thực" nếu thấy lạ. **Hình bớt trễ** khi WiFi chậm (điện thoại không dồn nhiều khung cũ). **Bàn phím**: đang ở tab Màn hình thì phím luôn gửi sang điện thoại kể cả khi vừa bấm nút khác trong cửa sổ; gõ nhanh hoặc gõ tiếng Việt bằng Unikey không còn mất chữ. Cần cập nhật cả hai app.

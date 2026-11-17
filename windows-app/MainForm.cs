@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -561,7 +561,7 @@ namespace LinkDesk
                     OnStatus(m);
                     screen.Streaming = Cfg.LiveTouch && PhoneAtLeast(0, 16);
                     if (Cfg.Audio) client?.Send("t", "audio", "on", true);
-                    h264Retries = 0; h264Failed = false;
+                    h264Retries = 0; h264Failed = false; decodeFails = 0;
                     if (Cfg.H264) RequestCodec();
                     lastView = null; UpdateViewing(true);
                     Text = "LinkDesk – " + phoneName;

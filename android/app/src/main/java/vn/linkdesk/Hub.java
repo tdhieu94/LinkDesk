@@ -79,6 +79,13 @@ public final class Hub {
     public static void setH264Failed() { h264FailedUntil = android.os.SystemClock.uptimeMillis() + 120_000; }
     public static void clearH264Failed() { h264FailedUntil = 0; }
 
+    /** Gioi han canh dai cua video H.264 ma cac may tinh giai ma duoc (0 = khong gioi han). */
+    public static int h264Cap() {
+        int cap = 0;
+        for (WsConn c : snapshotClients()) if (c.wantH264 && c.h264Max > 0) cap = cap == 0 ? c.h264Max : Math.min(cap, c.h264Max);
+        return cap;
+    }
+
     public static void publishVideo(byte[] p, boolean key) {
         for (WsConn c : snapshotClients()) if (c.wantH264) c.sendVideo(p, key);
     }

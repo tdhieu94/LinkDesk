@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -23,6 +23,7 @@ namespace LinkDesk
         static Guid MF_MT_FRAME_RATE = new Guid("c459a2e8-3d2c-4e44-b132-fee5156c7bb0");
         static Guid MF_MT_INTERLACE_MODE = new Guid("e2724bb8-e676-4806-b4b2-a8d6efb44ccd");
         static Guid MF_MT_DEFAULT_STRIDE = new Guid("644b4e48-1e02-4516-b0eb-c01ca9d49ac6");
+        static Guid MF_MT_PIXEL_ASPECT_RATIO = new Guid("c6376a1e-8d0a-4027-be45-6d9a0ad39bb6");
         static Guid MF_LOW_LATENCY = new Guid("9c27891a-ed7a-40e1-88e8-b22727a024ee");
         static Guid MFMediaType_Video = new Guid("73646976-0000-0010-8000-00AA00389B71");
         static Guid MFVideoFormat_H264 = new Guid("34363248-0000-0010-8000-00AA00389B71");
@@ -46,14 +47,18 @@ namespace LinkDesk
 
         static void Check(int hr, string what) { if (hr < 0) throw new COMException("Media Foundation " + what + " lỗi 0x" + hr.ToString("X8"), hr); }
 
-        public H264Decoder(int width, int height)
+        static int Align16(int v) => (v + 15) & ~15;
+
+        public readonly bool LowLatency;
+
+        public H264Decoder(int width, int height, bool lowLatency = true)
         {
-            Width = width; Height = height;
+            Width = width; Height = height; LowLatency = lowLatency;
             if (!started) { Check(MFStartup(0x00020070, 0), "MFStartup"); started = true; }
             dec = (IMFTransform)Activator.CreateInstance(Type.GetTypeFromCLSID(CLSID_H264Decoder, true));
             try
             {
-                if (dec.GetAttributes(out var a) >= 0 && a != null) { a.SetUINT32(ref MF_LOW_LATENCY, 1); Marshal.ReleaseComObject(a); }
+                if (lowLatency && dec.GetAttributes(out var a) >= 0 && a != null) { a.SetUINT32(ref MF_LOW_LATENCY, 1); Marshal.ReleaseComObject(a); }
             }
             catch { }
             Check(MFCreateMediaType(out var it), "MFCreateMediaType");
@@ -62,6 +67,7 @@ namespace LinkDesk
             it.SetUINT64(ref MF_MT_FRAME_SIZE, ((long)width << 32) | (uint)height);
             it.SetUINT64(ref MF_MT_FRAME_RATE, (30L << 32) | 1);
             it.SetUINT32(ref MF_MT_INTERLACE_MODE, 2); // progressive
+            it.SetUINT64(ref MF_MT_PIXEL_ASPECT_RATIO, (1L << 32) | 1);
             Check(dec.SetInputType(0, it, 0), "SetInputType");
             Marshal.ReleaseComObject(it);
             PickOutputType();
@@ -91,7 +97,8 @@ namespace LinkDesk
             }
             Check(dec.GetOutputStreamInfo(0, out var info), "GetOutputStreamInfo");
             providesSamples = (info.dwFlags & MFT_OUTPUT_STREAM_PROVIDES_SAMPLES) != 0;
-            outSize = Math.Max(info.cbSize, outStride * outH * 3 / 2);
+            // Bo giai ma lam tron kich thuoc len boi 16: cap du rong de khong bao loi khi ghi anh
+            outSize = Math.Max(info.cbSize, Math.Max(outStride, Align16(outW)) * Align16(outH) * 3 / 2);
             if (outSample != null) { Marshal.ReleaseComObject(outSample); outSample = null; }
         }
 

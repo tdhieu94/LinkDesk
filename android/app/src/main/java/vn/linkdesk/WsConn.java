@@ -27,6 +27,7 @@ public class WsConn {
     public volatile boolean wantAudio;
     /** May tinh nay giai ma duoc H.264. */
     public volatile boolean wantH264;
+    public volatile int h264Max;
     /** May tinh dang hien man hinh; false = khong gui hinh de tiet kiem pin va mang. */
     public volatile boolean viewing = true;
     private final java.util.ArrayDeque<byte[]> videoQ = new java.util.ArrayDeque<byte[]>();

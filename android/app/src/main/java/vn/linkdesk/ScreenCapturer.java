@@ -53,6 +53,7 @@ public class ScreenCapturer implements ImageReader.OnImageAvailableListener {
     private Surface codecSurface;
     private volatile boolean codecRunning;
     private byte[] csd = new byte[0];
+    private int appliedCap;
     private long lastKeyReq;
 
     public ScreenCapturer(Context ctx, MediaProjection projection) {
@@ -89,7 +90,10 @@ public class ScreenCapturer implements ImageReader.OnImageAvailableListener {
     private void computeSize() {
         int[] r = realSize(ctx);
         int w = r[0], h = r[1];
-        float scale = Math.min(1f, (float) maxSize / Math.max(w, h));
+        int lim = maxSize;
+        appliedCap = h264 ? Hub.h264Cap() : 0;
+        if (appliedCap > 0) lim = Math.min(lim, Math.max(480, appliedCap));
+        float scale = Math.min(1f, (float) lim / Math.max(w, h));
         // H.264: canh boi 16 de bo giai ma khong phai cat vien
         int align = h264 ? ~15 : ~1;
         width = Math.max(16, Math.round(w * scale) & align);
@@ -228,7 +232,12 @@ public class ScreenCapturer implements ImageReader.OnImageAvailableListener {
         handler.post(new Runnable() {
             @Override public void run() {
                 boolean want = Hub.allWantH264();
-                if (want == h264 || vd == null) { if (h264) requestKey(); return; }
+                if (want == h264 || vd == null) {
+                    // May tinh doi gioi han kich thuoc (bo giai ma cua no khong chiu noi): ma hoa lai
+                    if (h264 && vd != null && Hub.h264Cap() != appliedCap) { restartEncoder(); return; }
+                    if (h264) requestKey();
+                    return;
+                }
                 if (want) {
                     h264 = true;
                     if (!startEncoder()) { h264 = false; resize(); Hub.toastAll("Điện thoại tạm chưa bật được video H.264, đang dùng chế độ ảnh. Máy tính sẽ tự thử lại sau ít phút."); Hub.setH264Failed(); }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -202,6 +202,8 @@ namespace LinkDesk
                     sb.AppendLine("Mã hoá: " + (c.Secure ? "có · mã bảo mật " + Tls.ShortCode(c.ObservedSha ?? e.CertSha) : "không"));
                     sb.AppendLine("Độ trễ: " + (c.LatencyMs < 0 ? "đang đo…" : c.LatencyMs + " ms" + (c.LatencyMs < 60 ? " (tốt)" : c.LatencyMs < 150 ? " (trung bình)" : " (chậm)")));
                     sb.AppendLine("Hình: " + main.FpsNow + "/" + st.L("fps", 30) + " khung/s · " + (st.S("codec") == "h264" ? "H.264" : "JPEG") + " · " + st.L("maxSize", 1280) + " px · nhận " + (main.RxPerSec / 1024) + " KB/s");
+                    if (st.S("codec") == "h264" || main.LastDecodeError != null)
+                        sb.AppendLine("Giải mã H.264: giới hạn " + main.H264Cap + " px" + (main.LastDecodeError == null ? " · chưa lỗi" : " · lỗi gần nhất " + main.LastDecodeError));
                     sb.AppendLine("Âm thanh: " + (st.B("audio") ? "đang phát" : "tắt"));
                     sb.AppendLine("Số lần mất kết nối: " + c.Reconnects + (string.IsNullOrEmpty(c.LastError) ? "" : "\nLỗi gần nhất: " + c.LastError));
                 }

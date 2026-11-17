@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
 
@@ -13,6 +13,11 @@ namespace LinkDesk
         H264Decoder decoder;
         bool needKey = true;
         int packetsNoOutput;
+        // Tu sua loi giai ma ngay tren may tinh truoc khi phai quay ve che do anh
+        int decodeFails, framesSinceFail;
+        bool decoderLowLatency = true;
+        // Canh dai toi da xin dien thoai ma hoa. Bo giai ma cua Windows chi chiu toi 2304 diem anh.
+        volatile int h264Cap = 2304;
 
         public bool H264Active => client != null && LastStatus.S("codec") == "h264";
 
@@ -20,6 +25,7 @@ namespace LinkDesk
         {
             Cfg.H264 = on; Cfg.Save();
             h264Failed = false; h264Retries = 0;
+            ResetDecodeRecovery();
             RequestCodec();
         }
 
@@ -28,7 +34,7 @@ namespace LinkDesk
             needKey = true;
             if (!PhoneAtLeast(0, 10)) return;
             lastCodecAsk = DateTime.Now;
-            client?.Send("t", "codec", "h264", Cfg.H264 && !h264Failed, "retry", true);
+            client?.Send("t", "codec", "h264", Cfg.H264 && !h264Failed, "retry", true, "max", h264Cap);
         }
 
         DateTime lastCodecAsk;
@@ -76,7 +82,7 @@ namespace LinkDesk
                         if (!key) { needKey = true; continue; }
                         decoder?.Dispose();
                         decoder = null;
-                        decoder = new H264Decoder(w, h);
+                        decoder = new H264Decoder(w, h, decoderLowLatency);
                         packetsNoOutput = 0;
                     }
                     needKey = false;
@@ -87,13 +93,40 @@ namespace LinkDesk
                         if (client != c || IsDisposed) { bmp.Dispose(); return; }
                         try { BeginInvoke(new Action(() => { if (client == c) { RecordFrame(bmp, fw, fh); screen.SetFrame(bmp, fw, fh); } else bmp.Dispose(); })); } catch { bmp.Dispose(); }
                     });
+                    if (decoder.FramesOut > before && ++framesSinceFail >= 60) decodeFails = 0;
                     if (decoder.FramesOut == 0 && ++packetsNoOutput > 90) throw new Exception("không ra hình sau 90 khung");
                 }
                 catch (Exception ex)
                 {
-                    FailH264(c, ex.Message);
+                    RecoverDecode(c, ex.Message, Math.Max(w, h));
                 }
             }
+        }
+
+        public string LastDecodeError;
+        public int H264Cap => h264Cap;
+
+        void ResetDecodeRecovery() { decodeFails = 0; framesSinceFail = 0; decoderLowLatency = true; h264Cap = 2304; }
+
+        /// <summary>
+        /// Loi giai ma (thuong la 0x80004005): tao lai bo giai ma va xin khung khoa moi, roi lan luot
+        /// tat che do do tre thap, giam kich thuoc video. Chi quay ve anh JPEG khi van loi.
+        /// </summary>
+        void RecoverDecode(PhoneClient c, string why, int longSide)
+        {
+            try { decoder?.Dispose(); } catch { }
+            decoder = null;
+            needKey = true;
+            framesSinceFail = 0;
+            int n = ++decodeFails;
+            LastDecodeError = DateTime.Now.ToString("HH:mm:ss") + " lần " + n + ": " + why + " (khung " + longSide + " px)";
+            if (n >= 6) { FailH264(c, why); return; }
+            if (n >= 2) decoderLowLatency = false;
+            int cap = h264Cap;
+            if (n >= 3) cap = longSide > 1920 ? 1920 : longSide > 1280 ? 1280 : cap;
+            if (n >= 5) cap = Math.Min(cap, 1280);
+            if (cap != h264Cap && PhoneAtLeast(0, 16)) { h264Cap = cap; RequestCodec(); }
+            else c.Send("t", "keyframe");
         }
 
         void FailH264(PhoneClient c, string why)
@@ -111,7 +144,7 @@ namespace LinkDesk
                     {
                         // Loi tam thoi (doi do net, xoay man hinh...): dung anh 10 giay roi thu lai
                         var t = new System.Windows.Forms.Timer { Interval = 10000 };
-                        t.Tick += (s, e) => { t.Stop(); t.Dispose(); if (client == c && Cfg.H264) { h264Failed = false; RequestCodec(); } };
+                        t.Tick += (s, e) => { t.Stop(); t.Dispose(); if (client == c && Cfg.H264) { h264Failed = false; decodeFails = 0; RequestCodec(); } };
                         t.Start();
                     }
                     else Toast("Máy tính này không giải mã được video H.264 (" + why + "), đang dùng chế độ ảnh. Tắt rồi bật lại mục H.264 trong Cài đặt để thử lại.");
