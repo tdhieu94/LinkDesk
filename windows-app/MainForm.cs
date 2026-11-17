@@ -561,7 +561,8 @@ namespace LinkDesk
                     OnStatus(m);
                     screen.Streaming = Cfg.LiveTouch && PhoneAtLeast(0, 16);
                     if (Cfg.Audio) client?.Send("t", "audio", "on", true);
-                    if (Cfg.H264 && !h264Failed) RequestCodec();
+                    h264Retries = 0; h264Failed = false;
+                    if (Cfg.H264) RequestCodec();
                     lastView = null; UpdateViewing(true);
                     Text = "LinkDesk – " + phoneName;
                     if (current != null && current.Name != phoneName) { current.Name = phoneName; Cfg.Save(); }
@@ -620,6 +621,7 @@ namespace LinkDesk
         void OnStatus(Dictionary<string, object> s)
         {
             foreach (var kv in s) LastStatus[kv.Key] = kv.Value;
+            CheckCodec();
             notifWarn.Visible = LastStatus.Has("notif") && !LastStatus.B("notif");
             darkBtn.Toggled = LastStatus.B("dark"); darkBtn.Invalidate();
             awakeTile.Toggled = !LastStatus.Has("keepAwake") || LastStatus.B("keepAwake"); awakeTile.Invalidate();

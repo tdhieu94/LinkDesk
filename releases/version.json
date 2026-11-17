@@ -1,12 +1,12 @@
 {
   "android": {
-    "versionCode": 17,
-    "versionName": "0.16.0",
+    "versionCode": 18,
+    "versionName": "0.16.1",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.apk"
   },
   "windows": {
-    "version": "0.19.0",
+    "version": "0.19.1",
     "url": "https://raw.githubusercontent.com/tdhieu94/LinkDesk/main/releases/LinkDesk.exe"
   },
-  "notes": "Điều khiển bằng chuột mượt hơn (chạm, kéo theo thời gian thực), giảm độ trễ hình, bàn phím luôn gõ sang điện thoại và không mất chữ khi gõ nhanh."
+  "notes": "Video H.264 ổn định hơn: tự chọn kích thước điện thoại mã hoá được, tự khởi động lại khi lỗi và tự thử lại thay vì tắt hẳn."
 }

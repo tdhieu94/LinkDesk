@@ -64,18 +64,20 @@ public final class Hub {
     }
 
     // ---------------------------------------------------------------- H.264
-    private static volatile boolean h264Failed;
+    private static volatile long h264FailedUntil;
 
     /** Co may dang xem va tat ca deu giai ma duoc H.264. */
     public static boolean allWantH264() {
-        if (h264Failed) return false;
+        if (android.os.SystemClock.uptimeMillis() < h264FailedUntil) return false;
         List<WsConn> l = snapshotClients();
         if (l.isEmpty()) return false;
         for (WsConn c : l) if (!c.wantH264) return false;
         return true;
     }
 
-    public static void setH264Failed() { h264Failed = true; }
+    /** Loi H.264: dung che do anh 2 phut roi cho thu lai. */
+    public static void setH264Failed() { h264FailedUntil = android.os.SystemClock.uptimeMillis() + 120_000; }
+    public static void clearH264Failed() { h264FailedUntil = 0; }
 
     public static void publishVideo(byte[] p, boolean key) {
         for (WsConn c : snapshotClients()) if (c.wantH264) c.sendVideo(p, key);

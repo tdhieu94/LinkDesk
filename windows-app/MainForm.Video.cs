@@ -19,7 +19,7 @@ namespace LinkDesk
         public void SetH264(bool on)
         {
             Cfg.H264 = on; Cfg.Save();
-            h264Failed = false;
+            h264Failed = false; h264Retries = 0;
             RequestCodec();
         }
 
@@ -27,7 +27,20 @@ namespace LinkDesk
         {
             needKey = true;
             if (!PhoneAtLeast(0, 10)) return;
-            client?.Send("t", "codec", "h264", Cfg.H264 && !h264Failed);
+            lastCodecAsk = DateTime.Now;
+            client?.Send("t", "codec", "h264", Cfg.H264 && !h264Failed, "retry", true);
+        }
+
+        DateTime lastCodecAsk;
+        int h264Retries;
+
+        /// <summary>Goi moi lan nhan trang thai: bat H.264 ma dien thoai dang gui anh (do loi tam) thi thu lai sau vai phut.</summary>
+        void CheckCodec()
+        {
+            if (!Cfg.H264 || h264Failed || client == null || !client.IsOpen || !PhoneAtLeast(0, 10)) return;
+            if (LastStatus.S("codec") == "h264" || !LastStatus.B("mirror")) return;
+            if ((DateTime.Now - lastCodecAsk).TotalSeconds < 150) return;
+            RequestCodec();
         }
 
         void OnVideoPacket(PhoneClient c, byte[] p)
@@ -89,7 +102,22 @@ namespace LinkDesk
             try { decoder?.Dispose(); } catch { }
             decoder = null;
             c.Send("t", "codec", "h264", false);
-            try { BeginInvoke(new Action(() => Toast("Không giải mã được video H.264 trên máy này (" + why + "). Đã chuyển về chế độ ảnh JPEG."))); } catch { }
+            bool retry = ++h264Retries <= 2;
+            try
+            {
+                BeginInvoke(new Action(() =>
+                {
+                    if (retry)
+                    {
+                        // Loi tam thoi (doi do net, xoay man hinh...): dung anh 10 giay roi thu lai
+                        var t = new System.Windows.Forms.Timer { Interval = 10000 };
+                        t.Tick += (s, e) => { t.Stop(); t.Dispose(); if (client == c && Cfg.H264) { h264Failed = false; RequestCodec(); } };
+                        t.Start();
+                    }
+                    else Toast("Máy tính này không giải mã được video H.264 (" + why + "), đang dùng chế độ ảnh. Tắt rồi bật lại mục H.264 trong Cài đặt để thử lại.");
+                }));
+            }
+            catch { }
         }
     }
 }

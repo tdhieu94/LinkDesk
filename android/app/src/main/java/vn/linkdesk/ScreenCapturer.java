@@ -231,7 +231,7 @@ public class ScreenCapturer implements ImageReader.OnImageAvailableListener {
                 if (want == h264 || vd == null) { if (h264) requestKey(); return; }
                 if (want) {
                     h264 = true;
-                    if (!startEncoder()) { h264 = false; resize(); Hub.toastAll("Điện thoại không bật được video H.264, dùng lại chế độ ảnh JPEG."); Hub.setH264Failed(); }
+                    if (!startEncoder()) { h264 = false; resize(); Hub.toastAll("Điện thoại tạm chưa bật được video H.264, đang dùng chế độ ảnh. Máy tính sẽ tự thử lại sau ít phút."); Hub.setH264Failed(); }
                     else if (reader != null) { reader.close(); reader = null; }
                 } else {
                     h264 = false;
@@ -256,13 +256,42 @@ public class ScreenCapturer implements ImageReader.OnImageAvailableListener {
         } catch (Exception ignored) {}
     }
 
+    /** Thu nho kich thuoc cho vua kha nang bo ma hoa cua may (nhieu may chi ma hoa toi 1920 diem anh). */
+    private void fitEncoder(MediaCodec c) {
+        try {
+            MediaCodecInfo.VideoCapabilities vc = c.getCodecInfo().getCapabilitiesForType(MediaFormat.MIMETYPE_VIDEO_AVC).getVideoCapabilities();
+            int w = width, h = height, guard = 0;
+            while (guard++ < 40 && Math.max(w, h) > 320 && !(vc.isSizeSupported(w, h) && vc.areSizeAndRateSupported(w, h, Math.min(fps, 30)))) {
+                w = Math.max(16, (int) (w * 0.9f) & ~15);
+                h = Math.max(16, (int) (h * 0.9f) & ~15);
+            }
+            if (w != width || h != height) {
+                Log.i(TAG, "h264 fit " + width + "x" + height + " -> " + w + "x" + h);
+                dpi = Math.max(80, dpi * w / Math.max(1, width));
+                width = w; height = h;
+            }
+        } catch (Exception e) { Log.w(TAG, "h264 caps", e); }
+    }
+
     private boolean startEncoder() {
         computeSize();
-        int bitrate = (int) Math.min(20_000_000L, Math.max(1_000_000L,
-                (long) width * height * fps * (0.04 + (quality - 20) * 0.002)));
-        for (int attempt = 0; attempt < 2; attempt++) {
+        for (int attempt = 0; attempt < 4; attempt++) {
             MediaCodec c = null;
+            if (attempt >= 2) {
+                // Lan thu sau: nho hon han (720p) va doi bo ma hoa cu giai phong xong
+                try { Thread.sleep(300); } catch (InterruptedException ignored) {}
+                float s = 1280f / Math.max(width, height);
+                if (s < 1f) { width = Math.max(16, (int) (width * s) & ~15); height = Math.max(16, (int) (height * s) & ~15); dpi = Math.max(80, (int) (dpi * s)); }
+            }
+            int bitrate = (int) Math.min(20_000_000L, Math.max(1_000_000L,
+                    (long) width * height * fps * (0.04 + (quality - 20) * 0.002)));
             try {
+                c = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
+                fitEncoder(c);
+                try {
+                    android.util.Range<Integer> br = c.getCodecInfo().getCapabilitiesForType(MediaFormat.MIMETYPE_VIDEO_AVC).getVideoCapabilities().getBitrateRange();
+                    bitrate = br.clamp(bitrate);
+                } catch (Exception ignored) {}
                 MediaFormat f = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
                 f.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
                 f.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
@@ -270,11 +299,10 @@ public class ScreenCapturer implements ImageReader.OnImageAvailableListener {
                 f.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 3);
                 f.setLong(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 250_000); // man hinh dung yen: lap khung 4 lan/giay
                 if (Build.VERSION.SDK_INT >= 29) f.setFloat("max-fps-to-encoder", fps);
-                if (attempt == 0) {
+                if (attempt == 0 || attempt == 2) {
                     f.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline);
                     f.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel41);
                 }
-                c = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
                 c.configure(f, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
                 Surface s = c.createInputSurface();
                 c.start();
@@ -317,7 +345,7 @@ public class ScreenCapturer implements ImageReader.OnImageAvailableListener {
         if (!startEncoder()) {
             h264 = false;
             resize();
-            Hub.toastAll("Video H.264 bị lỗi, dùng lại chế độ ảnh JPEG.");
+            Hub.toastAll("Video H.264 tạm bị lỗi, đang dùng chế độ ảnh. Máy tính sẽ tự thử lại sau ít phút.");
             Hub.setH264Failed();
             Commands.broadcastStatus(ctx);
         }
@@ -350,7 +378,13 @@ public class ScreenCapturer implements ImageReader.OnImageAvailableListener {
                 Hub.publishVideo(p, key);
             }
         } catch (Exception e) {
-            if (codecRunning) Log.w(TAG, "h264 drain", e);
+            if (codecRunning && codec == c) {
+                Log.w(TAG, "h264 drain", e);
+                // Bo ma hoa loi giua chung (hay gap khi tat/bat man hinh): khoi dong lai thay vi dung hinh
+                if (handler != null) handler.post(new Runnable() {
+                    @Override public void run() { if (h264 && codec == c && vd != null) restartEncoder(); }
+                });
+            }
         }
     }
 

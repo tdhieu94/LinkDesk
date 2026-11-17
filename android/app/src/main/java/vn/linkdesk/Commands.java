@@ -276,6 +276,7 @@ public final class Commands {
             }
             case "codec": {
                 c.wantH264 = m.optBoolean("h264");
+                if (c.wantH264 && m.optBoolean("retry")) Hub.clearH264Failed();
                 c.resetVideo();
                 MirrorService ms = Hub.mirror;
                 if (ms != null) ms.onClientsChanged();
